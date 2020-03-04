@@ -116,7 +116,6 @@ class Policy(nn.Module):
         #stab press, release
         out4 = self.sigmoid(out[3]) #b,1
 
-        print(out1)
         return (out1, out2, out3, out4)
 
 class Value(nn.Module):

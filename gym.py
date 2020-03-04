@@ -23,12 +23,13 @@ class EggnoggGym():
         monitor (dict): the coodinates of the screen :top, left, width, height
         sct (func): <function mss.factory.mss(**kwargs)>
     """    
-    def __init__(self, need_pretrained):
+    def __init__(self, need_pretrained, device):
         # xwininfo -name eggnoggplus
-        self.monitor = {"top": 57, "left": 67, "width": 480, "height":320}
+        self.monitor = {"top": 70, "left": 64, "width": 1440, "height":960}
         self.sct = mss()
-        self.resize_factor = 4
+        self.resize_factor = 12 #width 120, height 80
         self.pil2tensor = transforms.ToTensor()
+        self.device = device
 
 
         self.delay = int(130e3)
@@ -40,15 +41,14 @@ class EggnoggGym():
         self.xdo.send_keysequence_window_down(self.win_id, b'v')
         self.xdo.send_keysequence_window_up(self.win_id, b'v')
 
-
         #init observation network
-        self.observation = Observation(need_pretrained=need_pretrained)
+        self.observation = Observation(need_pretrained=need_pretrained).to(device)
 
         #init noop prev_action
         self.prev_action = [[2,2], #x_action
-                               [2,2], #y_action
-                               [False, False], #jump_action
-                               [False, False]] #stab_action
+                            [2,2], #y_action
+                            [False, False], #jump_action
+                            [False, False]] #stab_action
 
         #grab first 4 frames
         self.states = self.get_single_state()[0]
@@ -66,14 +66,15 @@ class EggnoggGym():
         x_action = Categorical(action_tensors[0]).sample()
         y_action = Categorical(action_tensors[1]).sample()
         
-        jump_action = action_tensors[2] < torch.rand(2,1)
-        stab_action = action_tensors[3] < torch.rand(2,1)
+        jump_action = action_tensors[2] < torch.rand((2,1), device=self.device)
+        stab_action = action_tensors[3] < torch.rand((2,1), device=self.device)
 
         string_press = []
         string_lift = []
 
         #x action
-        if x_action[0] == 0:
+        print(x_action)
+        if x_action[0].item() == 0:
             string_press.append('q')
         elif x_action[0] == 1:
             string_press.append('d')
@@ -127,11 +128,7 @@ class EggnoggGym():
         #update previous actions
         self.prev_action = [x_action, y_action, jump_action, stab_action]
 
-        print(string_press,'\n',string_lift)
-
         #send inputs to eggnogg
-        #self.xdo.send_keysequence_window_up(self.win_id, string_lift,self.delay)
-        #self.xdo.send_keysequence_window_down(self.win_id, string_press,0)
         for lift in string_lift:
             pyautogui.keyUp(lift, _pause=False)
         for press in string_press:
@@ -176,7 +173,7 @@ class EggnoggGym():
 
             #cat state and inversed on batch dimension
             state = torch.cat((state, state_inversed), dim=0)
-        return state, (r1, r2), is_terminal
+        return state.to(self.device), (r1, r2), is_terminal
 
 
     def reset(self):

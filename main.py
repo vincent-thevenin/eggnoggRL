@@ -12,13 +12,13 @@ from loss import perf_policy, perf_value
 gamma = 0.99
 path_to_chkpt = 'weights.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
-cuda = torch.device('cuda:0') #pylint: disable=no-member
+gpu = torch.device('cuda:0') #pylint: disable=no-member
 
 #networks
 P = Policy()
 V = Value()
 need_pretrained = not os.path.isfile(path_to_chkpt)
-gym = EggnoggGym(need_pretrained) #network in gym.observation
+gym = EggnoggGym(need_pretrained, gpu) #network in gym.observation
 
 #performance measures
 Perf_p = perf_policy()
@@ -58,6 +58,9 @@ else:
     gym.observation.load_state_dict(checkpoint['O_state_dict'])
     optimizerP.load_state_dict(checkpoint['optimizerP'])
     optimizerV.load_state_dict(checkpoint['optimizerV'])
+
+P.to(gpu)
+V.to(gpu)
 
 
 #############################################################################
@@ -115,9 +118,20 @@ while True:
             obs = obs_new
 
             stop = datetime.now()
-            print(stop-start)
+            """print(stop-start, v_new.item())"""
     episode += 1
     episode_len.append(steps)
     print('reset')
     gym.reset()
+    print('Saving weights...')
+    torch.save({
+            'episode': episode,
+            'episode_len': episode_len,
+            'P_state_dict': P.state_dict(),
+            'V_state_dict': V.state_dict(),
+            'O_state_dict': gym.observation.state_dict(),
+            'optimizerP': optimizerP.state_dict(),
+            'optimizerV': optimizerV.state_dict()
+            }, path_to_chkpt)
+    print('...Done')
     

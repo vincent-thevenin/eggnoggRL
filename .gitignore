@@ -1,0 +1,10 @@
+
+.spyproject/
+
+.vscode/
+
+__pycache__/
+
+eggnoggplus-linux/
+
+weights.tar

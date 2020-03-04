@@ -12,7 +12,7 @@ class perf_policy(nn.Module):
             actions_prob: tuple of actions probabilities from policy
             actions_choice: list of tensors from gym.prev_actions"""
         
-        perf = torch.ones(1, requires_grad=True)
+        perf = 1
 
         for i in range(2): #x, y actions
             perf = perf * actions_prob[i][0, actions_choice[i][0]]

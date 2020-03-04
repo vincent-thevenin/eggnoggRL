@@ -34,7 +34,7 @@ class Policy(nn.Module):
         #b, 3, 320,480
         self.relu = nn.LeakyReLU()
         self.sigmoid = nn.Sigmoid()
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=1)
 
         """self.conv1 = nn.utils.spectral_norm(nn.Conv2d(3, 32, 3, padding=1)) 
         #b,32,480,320
@@ -97,7 +97,7 @@ class Policy(nn.Module):
 
         out = out.view(-1, 128*15*10)
         out = out.unsqueeze(1)"""
-
+        
         out = self.lin1(observation)
         out = self.relu(out)
         out = self.lin2(out)

@@ -52,8 +52,8 @@ class EggnoggGym():
 
         #grab first 4 frames
         self.states = self.get_single_state()[0]
-        for i in range(3):
-            self.states = torch.cat((self.states, self.get_single_state()[0]), dim=2)
+        for _ in range(3):
+            self.states = torch.cat((self.states, self.get_single_state()[0]), dim=2) # pylint: disable=no-member
 
 
 
@@ -66,15 +66,14 @@ class EggnoggGym():
         x_action = Categorical(action_tensors[0]).sample()
         y_action = Categorical(action_tensors[1]).sample()
         
-        jump_action = action_tensors[2] < torch.rand((2,1), device=self.device)
-        stab_action = action_tensors[3] < torch.rand((2,1), device=self.device)
+        jump_action = action_tensors[2] < torch.rand((2,1), device=self.device)# pylint: disable=no-member
+        stab_action = action_tensors[3] < torch.rand((2,1), device=self.device)# pylint: disable=no-member
 
         string_press = []
         string_lift = []
 
         #x action
-        print(x_action)
-        if x_action[0].item() == 0:
+        if x_action[0] == 0:
             string_press.append('q')
         elif x_action[0] == 1:
             string_press.append('d')
@@ -172,7 +171,7 @@ class EggnoggGym():
             state_inversed = state.flip([-1])[:,[1,0,2],:,:,:]
 
             #cat state and inversed on batch dimension
-            state = torch.cat((state, state_inversed), dim=0)
+            state = torch.cat((state, state_inversed), dim=0)# pylint: disable=no-member
         return state.to(self.device), (r1, r2), is_terminal
 
 
@@ -197,7 +196,7 @@ class EggnoggGym():
         #get state
         state, reward, is_terminal = self.get_single_state()
 
-        self.states = torch.cat((self.states, state), dim=2)
+        self.states = torch.cat((self.states, state), dim=2)# pylint: disable=no-member
         #2,3,4,320,480
         obs = self.observation(self.states)
 

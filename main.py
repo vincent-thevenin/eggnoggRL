@@ -9,7 +9,7 @@ from time import sleep
 from loss import perf_policy, perf_value
 
 #params
-gamma = 0.99
+gamma = 0.9
 path_to_chkpt = 'weights.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
 gpu = torch.device('cuda:0') #pylint: disable=no-member
@@ -118,8 +118,9 @@ while True:
             obs = obs_new
 
             stop = datetime.now()
-            """print(stop-start, v_new.item())"""
+            """print(stop-start)"""
     episode += 1
+    print(episode)
     episode_len.append(steps)
     print('reset')
     gym.reset()
@@ -134,4 +135,3 @@ while True:
             'optimizerV': optimizerV.state_dict()
             }, path_to_chkpt)
     print('...Done')
-    

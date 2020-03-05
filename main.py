@@ -24,12 +24,6 @@ gym = EggnoggGym(need_pretrained, gpu) #network in gym.observation
 Perf_p = perf_policy()
 Perf_v = perf_value()
 
-#optimizer
-optimizerP = optim.Adam(params= list(P.parameters()) + list(gym.observation.parameters()),
-                        lr=1e-4)
-optimizerV = optim.Adam(params=list(V.parameters()) + list(gym.observation.parameters()),
-                        lr=4e-4)
-
 #info
 episode = 0
 episode_len = []
@@ -42,9 +36,9 @@ if need_pretrained:
             'episode_len': episode_len,
             'P_state_dict': P.state_dict(),
             'V_state_dict': V.state_dict(),
-            'O_state_dict': gym.observation.state_dict(),
-            'optimizerP': optimizerP.state_dict(),
-            'optimizerV': optimizerV.state_dict()
+            'O_state_dict': gym.observation.state_dict()#,
+            #'optimizerP': optimizerP.state_dict(),
+            #'optimizerV': optimizerV.state_dict()
             }, path_to_chkpt)
     print('...Done')
 
@@ -56,12 +50,20 @@ else:
     P.load_state_dict(checkpoint['P_state_dict'])
     V.load_state_dict(checkpoint['V_state_dict'])
     gym.observation.load_state_dict(checkpoint['O_state_dict'])
-    optimizerP.load_state_dict(checkpoint['optimizerP'])
-    optimizerV.load_state_dict(checkpoint['optimizerV'])
+    
 
 P.to(gpu)
 V.to(gpu)
+gym.observation.to(gpu)
 
+#optimizer
+optimizerP = optim.Adam(params= list(P.parameters()) + list(gym.observation.parameters()),
+                        lr=1e-4)
+optimizerV = optim.Adam(params=list(V.parameters()) + list(gym.observation.parameters()),
+                        lr=4e-4)
+if not need_pretrained:
+    optimizerP.load_state_dict(checkpoint['optimizerP'])
+    optimizerV.load_state_dict(checkpoint['optimizerV'])
 
 #############################################################################
 #one-step actor critic
@@ -96,6 +98,7 @@ while True:
 
             steps += 1
             actions = P(obs)
+            print(actions)
             obs_new, reward, is_terminal = gym.step(actions)
             v_old = V(obs[:1, :])
             with torch.autograd.no_grad():
@@ -108,7 +111,7 @@ while True:
             optimizerV.step()
 
             perf_p = Perf_p(delta, I, actions, gym.prev_action)
-            (-perf_p).backward()
+            (-perf_p).backward() #gradient ascent
             optimizerP.step()
 
             optimizerV.zero_grad()
@@ -118,7 +121,7 @@ while True:
             obs = obs_new
 
             stop = datetime.now()
-            """print(stop-start)"""
+            #print(stop-start)
     episode += 1
     print(episode)
     episode_len.append(steps)

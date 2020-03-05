@@ -27,7 +27,7 @@ class EggnoggGym():
         # xwininfo -name eggnoggplus
         self.monitor = {"top": 70, "left": 64, "width": 1440, "height":960}
         self.sct = mss()
-        self.resize_factor = 12 #width 120, height 80
+        self.resize_factor = self.monitor['width']//240 #width 240, height 160
         self.pil2tensor = transforms.ToTensor()
         self.device = device
 
@@ -128,7 +128,6 @@ class EggnoggGym():
         self.prev_action = [x_action, y_action, jump_action, stab_action]
 
         #send inputs to eggnogg
-        print(string_press, string_lift)
         for lift in string_lift:
             pyautogui.keyUp(lift, _pause=False)
         for press in string_press:

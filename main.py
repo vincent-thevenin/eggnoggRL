@@ -9,7 +9,7 @@ from time import sleep
 from loss import perf_policy, perf_value
 
 #params
-gamma = 0.9
+gamma = 1-1e-4
 path_to_chkpt = 'weights.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
 gpu = torch.device('cuda:0') #pylint: disable=no-member
@@ -30,7 +30,7 @@ episode_len = []
 
 #init save upon new start
 if need_pretrained:
-    print('Initializing weights...')
+    """print('Initializing weights...')
     torch.save({
             'episode': episode,
             'episode_len': episode_len,
@@ -40,7 +40,7 @@ if need_pretrained:
             #'optimizerP': optimizerP.state_dict(),
             #'optimizerV': optimizerV.state_dict()
             }, path_to_chkpt)
-    print('...Done')
+    print('...Done')"""
 
 #load weights
 else:
@@ -57,10 +57,10 @@ V.to(gpu)
 gym.observation.to(gpu)
 
 #optimizer
-optimizerP = optim.Adam(params= list(P.parameters()) + list(gym.observation.parameters()),
-                        lr=1e-4)
-optimizerV = optim.Adam(params=list(V.parameters()) + list(gym.observation.parameters()),
-                        lr=4e-4)
+optimizerP = optim.SGD(params= list(P.parameters()) + list(gym.observation.parameters()),
+                        lr=1e-2)
+optimizerV = optim.SGD(params=list(V.parameters()) + list(gym.observation.parameters()),
+                        lr=4e-2)
 if not need_pretrained:
     optimizerP.load_state_dict(checkpoint['optimizerP'])
     optimizerV.load_state_dict(checkpoint['optimizerV'])
@@ -98,13 +98,15 @@ while True:
 
             steps += 1
             actions = P(obs)
-            print(actions)
             obs_new, reward, is_terminal = gym.step(actions)
             v_old = V(obs[:1, :])
             with torch.autograd.no_grad():
-                v_new = V(obs_new[:1, :])
-                #calculate delta_t: R_t+1 + gamma*V(S_t+1) - V(S_t)
-                delta = reward[0] + gamma*v_new - v_old.detach()
+                #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
+                if not is_terminal:
+                    v_new = V(obs_new[:1, :])
+                    delta = reward[0] + gamma*v_new - v_old.detach()
+                else:
+                    delta = reward[0] - v_old
 
             perf_v = Perf_v(delta, v_old)
             (-perf_v).backward(retain_graph=True) #gradient ascent
@@ -121,6 +123,11 @@ while True:
             obs = obs_new
 
             stop = datetime.now()
+            print(delta, '\n',
+                v_old.item(), '\n',
+                v_new.item(), '\n',
+                actions,'\n',
+                I, '\n')
             #print(stop-start)
     episode += 1
     print(episode)

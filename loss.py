@@ -1,11 +1,11 @@
 import torch.nn as nn
 import torch
 
-class perf_policy(nn.Module):
+class PerfPolicy(nn.Module):
     def __init__(self):
-        super(perf_policy, self).__init__()
+        super(PerfPolicy, self).__init__()
         self.eps = 1e-6
-    def forward(self, delta, I, actions_prob, actions_choice):
+    def forward(self, delta, I, actions_prob, actions_choice, G_idx):
         """returns performance
         Args:
             delta: no_grad float
@@ -26,15 +26,15 @@ class perf_policy(nn.Module):
             perf_player = perf_player * (~actions_choice[i][0] + (2*actions_choice[i][0]-1) * actions_prob[i][0])
             perf_advers = perf_advers * (~actions_choice[i][1] + (2*actions_choice[i][1]-1) * actions_prob[i][1])
 
-        perf_player = perf_player + self.eps
-        perf_advers = perf_advers + self.eps
+        perf_player = (perf_player + self.eps)
+        perf_advers = (perf_advers + self.eps)
 
-        perf = torch.log(perf_player / perf_advers) #pylint: disable=no-member
+        perf = torch.log((perf_player / perf_advers)**(-2*G_idx + 1)) #pylint: disable=no-member
         return I * delta * perf
 
-class perf_value(nn.Module):
+class PerfValue(nn.Module):
     def __init__(self):
-        super(perf_value, self).__init__()
+        super(PerfValue, self).__init__()
     
-    def forward(self, delta, v_old):
-        return delta * v_old
+    def forward(self, delta, v_old, G_idx):
+        return delta * (v_old[G_idx] - v_old[(G_idx+1)%2])  #gradient ascent

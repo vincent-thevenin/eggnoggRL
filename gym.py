@@ -172,7 +172,7 @@ class EggnoggGym():
 
             #cat state and inversed on batch dimension
             state = torch.cat((state, state_inversed), dim=0)# pylint: disable=no-member
-        return state.to(self.device), (r1, r2), is_terminal
+        return state.to(self.device).detach_(), (r1, r2), is_terminal
 
 
     def reset(self):
@@ -198,6 +198,7 @@ class EggnoggGym():
 
         self.states = torch.cat((self.states, state), dim=2)# pylint: disable=no-member
         #2,3,4,320,480
-        obs = self.observation(self.states)
+        with torch.autograd.no_grad():
+            obs = self.observation(self.states)
 
         return obs, reward, is_terminal

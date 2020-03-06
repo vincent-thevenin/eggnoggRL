@@ -140,7 +140,7 @@ class Value(nn.Module):
 
         out = self.lin3(out)
         #out = self.tanh(out)
-        #b,1,1
+        #b,1
 
         out = out.squeeze(-1)
         #b

@@ -6,10 +6,12 @@ import torch
 from tqdm import tqdm
 from datetime import datetime
 from time import sleep
-from loss import perf_policy, perf_value
+from loss import PerfPolicy, PerfValue
+from math import sqrt
 
 #params
-gamma = 1-1e-4
+gamma = 0.998
+limit = 5e3
 path_to_chkpt = 'weights.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
 gpu = torch.device('cuda:0') #pylint: disable=no-member
@@ -21,11 +23,11 @@ need_pretrained = not os.path.isfile(path_to_chkpt)
 gym = EggnoggGym(need_pretrained, gpu) #network in gym.observation
 
 #performance measures
-Perf_p = perf_policy()
-Perf_v = perf_value()
+Perf_p = PerfPolicy()
+Perf_v = PerfValue()
 
 #info
-episode = 0
+episode = 1
 episode_len = []
 
 #init save upon new start
@@ -57,13 +59,11 @@ V.to(gpu)
 gym.observation.to(gpu)
 
 #optimizer
-optimizerP = optim.SGD(params= list(P.parameters()) + list(gym.observation.parameters()),
+optimizerP = optim.SGD(params= list(P.parameters()),
                         lr=1e-2)
-optimizerV = optim.SGD(params=list(V.parameters()) + list(gym.observation.parameters()),
+optimizerV = optim.SGD(params=list(V.parameters()),
                         lr=4e-2)
-if not need_pretrained:
-    optimizerP.load_state_dict(checkpoint['optimizerP'])
-    optimizerV.load_state_dict(checkpoint['optimizerV'])
+
 
 #############################################################################
 #one-step actor critic
@@ -84,35 +84,37 @@ actions = (torch.tensor([[.0,.0,1.0], #pylint: disable=not-callable
                         [.0]])
         )"""
 
+G_idx = 0
+steps = 0
 while True:
     #INITS
     is_terminal = False
-    steps = 0
     
     I = 1
     obs = gym.observation(gym.states)
 
     with torch.enable_grad():
         while not is_terminal:
+            G_idx = (G_idx+1)%2
             start = datetime.now()
 
             steps += 1
-            actions = P(obs)
+            actions = P(obs.detach())
             obs_new, reward, is_terminal = gym.step(actions)
-            v_old = V(obs[:1, :])
+            v_old = V(obs.detach())
             with torch.autograd.no_grad():
                 #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
-                if not is_terminal:
-                    v_new = V(obs_new[:1, :])
-                    delta = reward[0] + gamma*v_new - v_old.detach()
+                if not is_terminal and steps%limit != 0:
+                    v_new = V(obs_new)
+                    delta = reward[G_idx] + gamma*v_new[G_idx] - v_old[G_idx].detach()
                 else:
-                    delta = reward[0] - v_old
+                    delta = reward[G_idx] - v_old[G_idx]
 
-            perf_v = Perf_v(delta, v_old)
-            (-perf_v).backward(retain_graph=True) #gradient ascent
+            perf_v = Perf_v(delta, v_old, G_idx)
+            (-perf_v).backward() #gradient ascent
             optimizerV.step()
 
-            perf_p = Perf_p(delta, I, actions, gym.prev_action)
+            perf_p = Perf_p(delta, I, actions, gym.prev_action, G_idx)
             (-perf_p).backward() #gradient ascent
             optimizerP.step()
 
@@ -123,16 +125,24 @@ while True:
             obs = obs_new
 
             stop = datetime.now()
-            print(delta, '\n',
-                v_old.item(), '\n',
-                v_new.item(), '\n',
-                actions,'\n',
+            for a in actions:
+                print(a)
+            print(delta.item(), '\n',
+                v_old, '\n',
+                v_new, '\n',
                 I, '\n')
             #print(stop-start)
+            print()
+            if steps%limit == 0:
+                print('Reset', steps)
+                gym.reset()
+                I = 1
+                break
     episode += 1
-    print(episode)
+    print(episode, steps)
     episode_len.append(steps)
-    print('reset')
+    steps = 0
+    print('Finished')
     gym.reset()
     print('Saving weights...')
     torch.save({
@@ -140,7 +150,7 @@ while True:
             'episode_len': episode_len,
             'P_state_dict': P.state_dict(),
             'V_state_dict': V.state_dict(),
-            'O_state_dict': gym.observation.state_dict(),
+            #'O_state_dict': gym.observation.state_dict(),
             'optimizerP': optimizerP.state_dict(),
             'optimizerV': optimizerV.state_dict()
             }, path_to_chkpt)

@@ -25,9 +25,9 @@ class EggnoggGym():
     """    
     def __init__(self, need_pretrained, device):
         # xwininfo -name eggnoggplus
-        self.monitor = {"top": 70, "left": 64, "width": 1440, "height":960}
+        self.monitor = {"top": 57, "left": 67, "width": 480, "height":320}
         self.sct = mss()
-        self.resize_factor = self.monitor['width']//240 #width 240, height 160
+        self.resize_factor = self.monitor['width']//480 #width 480, height 320
         self.pil2tensor = transforms.ToTensor()
         self.device = device
 

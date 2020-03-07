@@ -168,7 +168,7 @@ def runloop():
                     if event.type == pg.QUIT:# pylint: disable=no-member
                             done = True
                             sys.exit()
-        time.sleep(1)# sleep one second to keep the cpu consumsion low, means that it takes a second to close
+        time.sleep(1)# sleep one second to keep the cpu consumtion low, means that it takes a second to close
 
 
 if __name__ == "__main__":

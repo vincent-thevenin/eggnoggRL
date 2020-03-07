@@ -54,7 +54,7 @@ else:
     episode_len = checkpoint['episode_len']
     P.load_state_dict(checkpoint['P_state_dict'])
     V.load_state_dict(checkpoint['V_state_dict'])
-    gym.observation.load_state_dict(checkpoint['O_state_dict'])
+    #gym.observation.load_state_dict(checkpoint['O_state_dict'])
     
 
 P.to(gpu)
@@ -63,9 +63,9 @@ gym.observation.to(gpu)
 
 #optimizer
 optimizerP = optim.SGD(params= list(P.parameters()),
-                        lr=1e-2)
+                        lr=1e-5)
 optimizerV = optim.SGD(params=list(V.parameters()),
-                        lr=4e-2)
+                        lr=4e-5)
 
 
 #############################################################################
@@ -88,18 +88,18 @@ actions = (torch.tensor([[.0,.0,1.0], #pylint: disable=not-callable
         )"""
 
 G_idx = 0
-steps = 0
-try: 
+try:
     while True:
         #INITS
         is_terminal = False
         
+        steps = green_reward_sum = 0
         I = 1
         obs = gym.observation(gym.states)
+        G_idx = (G_idx+1)%2
 
         with torch.enable_grad():
             while not is_terminal:
-                G_idx = (G_idx+1)%2
                 start = datetime.now()
 
                 steps += 1

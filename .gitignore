@@ -8,3 +8,5 @@ __pycache__/
 eggnoggplus-linux/
 
 weights.tar
+
+*.tar

@@ -7,12 +7,14 @@ from tqdm import tqdm
 from datetime import datetime
 from time import sleep
 from loss import PerfPolicy, PerfValue
-from math import sqrt
+from math import sqrt, exp, log
 import sys
 
 #params
-gamma = 0.998
-limit = 5e3
+min_I = 1e-5
+max_steps = 1000
+gamma = exp(log(min_I)/max_steps)
+print(gamma)
 path_to_chkpt = 'weights.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
 gpu = torch.device('cuda:0') #pylint: disable=no-member
@@ -103,10 +105,13 @@ try:
                 steps += 1
                 actions = P(obs.detach())
                 obs_new, reward, is_terminal = gym.step(actions)
+                if steps%max_steps == 0:
+                    is_terminal = True
+
                 v_old = V(obs.detach())
                 with torch.autograd.no_grad():
                     #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
-                    if not is_terminal and steps%limit != 0:
+                    if not is_terminal:
                         v_new = V(obs_new)
                         delta = reward[G_idx] + gamma*v_new[G_idx] - v_old[G_idx].detach()
                     else:

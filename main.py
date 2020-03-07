@@ -132,23 +132,25 @@ try:
                 obs = obs_new
 
                 stop = datetime.now()
-                for a in actions:
-                    print(a)
-                print(delta.item(), '\n',
-                    v_old, '\n',
-                    v_new, '\n',
-                    I, '\n')
+                """for a in actions:
+                    print(a)"""
+                print('delta:',delta.item(), '\n',
+                    'v_old:',v_old, '\n',
+                    'v_new:',v_new, '\n',
+                    'steps:',steps)
                 #print(stop-start)
+                """if reward[0] > reward[1]:
+                    print('G')
+                elif reward[0] == reward[1]:
+                    print('E')
+                else:
+                    print('R')"""
+                green_reward_sum += I*reward[0]
+                print('green_reward_sum:', green_reward_sum)
                 print()
-                if steps%limit == 0:
-                    print('Reset', steps)
-                    gym.reset()
-                    I = 1
-                    break
         episode += 1
         print(episode, steps)
         episode_len.append(steps)
-        steps = 0
         print('Finished')
         gym.reset()
         print('Saving weights...')

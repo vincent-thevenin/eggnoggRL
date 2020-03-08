@@ -159,6 +159,17 @@ class EggnoggGym():
             if torch.sum(state[0, :, 1] == 1.0):
                 r1 = -1.0
                 r2 = 1.0"""
+            #green pixels in middle of screen
+            green = torch.sum(state[1, :, state.shape[2]//3:state.shape[2]*2//3] == 1.0)
+            #red pixels in middle of screen
+            red = torch.sum(state[0, :, state.shape[2]//3:state.shape[2]*2//3] == 1.0)
+            if green and not red:
+                r1 = 1
+            elif red and not green:
+                r1 = -1
+            else:
+                r1 = 0
+            r2 = -r1
             #p1 wins, red water, bottom right
             if state[0, state.shape[1]-1, state.shape[2]-1] == 1.0:
                 is_terminal = True
@@ -169,17 +180,6 @@ class EggnoggGym():
                 is_terminal = True
                 r1 = -1000.0
                 r2 = 1000.0
-            #green pixels in middle of screen
-            green = torch.sum(state[1, :, state.shape[1]//3:state.shape[1]*2//3] == 1)
-            #red pixels in middle of screen
-            red = torch.sum(state[0, :, state.shape[1]//3:state.shape[1]*2//3] == 1)
-            if green > red:
-                r1 = 1
-            elif green == red:
-                r1 = 0
-            else:
-                r1 = -1
-            r2 = -r1
             
             state = state.unsqueeze(0)
             #b,3,320,480

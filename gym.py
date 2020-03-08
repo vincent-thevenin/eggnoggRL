@@ -50,9 +50,9 @@ class EggnoggGym():
                             [False, False], #jump_action
                             [False, False]] #stab_action
 
-        #grab first 4 frames
+        #grab first 8 frames
         self.states = self.get_single_state()[0]
-        for _ in range(3):
+        for _ in range(7):
             self.states = torch.cat((self.states, self.get_single_state()[0]), dim=2) # pylint: disable=no-member
 
 
@@ -206,8 +206,8 @@ class EggnoggGym():
 
     def step(self, action_tensor):
         #remove oldest state
-        self.states = self.states.split([1,3], dim=2)[1]
-        #2,3,3,320,480
+        self.states = self.states.split([1,7], dim=2)[1]
+        #2,3,7,320,480
 
         #act
         self.act(action_tensor)
@@ -216,8 +216,7 @@ class EggnoggGym():
         state, reward, is_terminal = self.get_single_state()
 
         self.states = torch.cat((self.states, state), dim=2)# pylint: disable=no-member
-        #2,3,4,320,480
-        with torch.autograd.no_grad():
-            obs = self.observation(self.states)
+        #2,3,8,320,480
+        obs = self.observation(self.states)
 
         return obs, reward, is_terminal

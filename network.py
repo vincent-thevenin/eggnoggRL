@@ -7,13 +7,13 @@ class Observation(nn.Module):
         super(Observation, self).__init__()
         self.relu = nn.LeakyReLU()
 
-        self.conv3d1 = nn.Conv3d(3, 3, (4, 3,3), padding=(0,1,1))
+        self.conv3d1 = nn.Conv3d(3, 3, (8, 3,3), padding=(0,1,1))
         self.pool1 = nn.AvgPool2d(2)
 
         self.resnet = resnet18(pretrained=need_pretrained)
     
     def forward(self, states):
-        #b,3,4,80,120
+        #b,3,8,80,120
         out = self.conv3d1(states)
         #b,3,1,80,120
         out = out.squeeze()

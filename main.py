@@ -54,7 +54,7 @@ else:
     episode_len = checkpoint['episode_len']
     P.load_state_dict(checkpoint['P_state_dict'])
     V.load_state_dict(checkpoint['V_state_dict'])
-    #gym.observation.load_state_dict(checkpoint['O_state_dict'])
+    gym.observation.load_state_dict(checkpoint['O_state_dict'])
     
 
 P.to(gpu)
@@ -64,7 +64,7 @@ gym.observation.to(gpu)
 #optimizer
 optimizerP = optim.SGD(params= list(P.parameters()),
                         lr=1e-5)
-optimizerV = optim.SGD(params=list(V.parameters()),
+optimizerV = optim.SGD(params=list(V.parameters())+list(gym.observation.parameters()),
                         lr=4e-5)
 
 
@@ -103,12 +103,12 @@ try:
                 start = datetime.now()
 
                 steps += 1
-                actions = P(obs.detach())
+                actions = P(obs)
                 obs_new, reward, is_terminal = gym.step(actions)
                 if steps%max_steps == 0:
                     is_terminal = True
 
-                v_old = V(obs.detach())
+                v_old = V(obs)
                 with torch.autograd.no_grad():
                     #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
                     if not is_terminal:
@@ -118,12 +118,16 @@ try:
                         delta = reward[G_idx] - v_old[G_idx]
 
                 perf_v = Perf_v(delta, v_old, G_idx)
-                (-perf_v).backward() #gradient ascent
-                optimizerV.step()
-
+                #(-perf_v).backward() #gradient ascent
+                
                 perf_p = Perf_p(delta, I, actions, gym.prev_action, G_idx)
-                (-perf_p).backward() #gradient ascent
+                #(-perf_p).backward() #gradient ascent
+                
+                perf = -(perf_v + perf_p) #gradient ascent
+                perf.backward()
+                optimizerV.step()
                 optimizerP.step()
+
 
                 optimizerV.zero_grad()
                 optimizerP.zero_grad()
@@ -138,7 +142,6 @@ try:
                     'v_old:',v_old, '\n',
                     'v_new:',v_new, '\n',
                     'steps:',steps)
-                #print(stop-start)
                 """if reward[0] > reward[1]:
                     print('G')
                 elif reward[0] == reward[1]:
@@ -147,6 +150,8 @@ try:
                     print('R')"""
                 green_reward_sum += I*reward[0]
                 print('green_reward_sum:', green_reward_sum)
+                print('undiscounted_reward:', reward[0])
+                print('time/step:',stop-start)
                 print()
         episode += 1
         print(episode, steps)
@@ -159,7 +164,7 @@ try:
                 'episode_len': episode_len,
                 'P_state_dict': P.state_dict(),
                 'V_state_dict': V.state_dict(),
-                #'O_state_dict': gym.observation.state_dict(),
+                'O_state_dict': gym.observation.state_dict(),
                 'optimizerP': optimizerP.state_dict(),
                 'optimizerV': optimizerV.state_dict()
                 }, path_to_chkpt)

@@ -3,6 +3,8 @@ from pynput import keyboard
 import sys
 import time
 
+global BASEWIDTH
+
 BASEWIDTH = 40# width of the suares , diamater of the circles
 # a temp surf for controller a
 SCREENA= pg.Surface((BASEWIDTH*5,BASEWIDTH*3)) #pylint: disable=too-many-function-args
@@ -175,7 +177,6 @@ if __name__ == "__main__":
     """
         executed as script not module
     """
-    global BASEWIDTH
     #initialize pygame
     pg.init()#pylint:disable=no-member
     screen = pg.display.set_mode((BASEWIDTH*10+10,BASEWIDTH*3))#set the display screen

@@ -18,7 +18,7 @@ print(gamma)
 path_to_chkpt = 'weights.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
 gpu = torch.device('cuda:0') #pylint: disable=no-member
-lib_path = "../libeggnogg/bin/libeggnogg.so"
+lib_path = "libeggnogg/bin/libeggnogg.so"
 executable_path = "eggnoggplus-linux/eggnoggplus"
 
 #networks

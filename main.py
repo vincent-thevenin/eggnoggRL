@@ -73,21 +73,22 @@ try:
         I = 1
         state = gym.states
         state = state.to(gpu)
+        state.requires_grad_()
 
         with torch.enable_grad():
             while not is_terminal:
                 start = datetime.now()
 
                 steps += 1
-                actions1 = P1(state.detach())
-                actions2 = P2(state.detach())
+                actions1 = P1(state)
+                actions2 = P2(state)
                 state_new, reward, is_terminal = gym.step(actions1, actions2)
                 state_new = state_new.to(gpu)
                 if steps%max_steps == 0:
                     is_terminal = True
 
-                v1_old = V1(state.detach())
-                v2_old = V2(state.detach())
+                v1_old = V1(state)#.detach())
+                v2_old = V2(state)#.detach())
                 with torch.autograd.no_grad():
                     #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
                     if not is_terminal:
@@ -116,6 +117,7 @@ try:
 
                 I *= gamma
                 state = state_new
+                state.requires_grad_()
 
                 stop = datetime.now()
                 if not steps%10:

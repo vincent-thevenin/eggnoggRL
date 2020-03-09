@@ -23,9 +23,7 @@ class PerfPolicy(nn.Module):
         for i in range(2,4):
             perf_player = perf_player * (~actions_choice[i][G_idx] + (2*actions_choice[i][G_idx]-1) * actions_prob[i][0])
 
-        perf_player = (perf_player + self.eps)
-
-        perf = torch.log(perf_player) #pylint: disable=no-member
+        perf = torch.log(perf_player+self.eps) #pylint: disable=no-member
         return I * delta * perf
 
 class PerfValue(nn.Module):

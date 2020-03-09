@@ -48,22 +48,22 @@ def actifpunch(screen,basecolor):
 """
 
 def unactifup(screen,basecolor):
-    mod = 0.6
+    mod = 0.2
     pg.draw.rect(screen,colo(basecolor,mod),pg.Rect(BASEWIDTH,0,BASEWIDTH,BASEWIDTH))
 def unactifdown(screen,basecolor):
-    mod = 0.6
+    mod = 0.2
     pg.draw.rect(screen,colo(basecolor,mod),pg.Rect(BASEWIDTH,BASEWIDTH*2,BASEWIDTH,BASEWIDTH))
 def unactifleft(screen,basecolor):
-    mod = 0.6
+    mod = 0.2
     pg.draw.rect(screen,colo(basecolor,mod),pg.Rect(0,BASEWIDTH,BASEWIDTH,BASEWIDTH))
 def unactifright(screen,basecolor):
-    mod = 0.6
+    mod = 0.2
     pg.draw.rect(screen,colo(basecolor,mod),pg.Rect(BASEWIDTH*2,BASEWIDTH,BASEWIDTH,BASEWIDTH))
 def unactifjump(screen,basecolor):
-    mod = 0.6
+    mod = 0.2
     pg.draw.circle(screen,colo(basecolor,mod),((BASEWIDTH*4)+5-BASEWIDTH//2,int(BASEWIDTH*2.5)-10),BASEWIDTH//2)
 def unactifpunch(screen,basecolor):
-    mod = 0.6
+    mod = 0.2
     pg.draw.circle(screen,colo(basecolor,mod),((BASEWIDTH*4)+BASEWIDTH//2,(BASEWIDTH//2)+10),BASEWIDTH//2)
 
 

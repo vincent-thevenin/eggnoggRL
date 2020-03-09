@@ -10,12 +10,13 @@ executable_path = "eggnoggplus-linux/eggnoggplus"
 
 EggNogg.init(lib_path, executable_path)
 print("Current speed %d" % EggNogg.getSpeed())
-time.sleep(5)
-#EggNogg.setSpeed(15)
-#print("Current speed %d" % EggNogg.getSpeed())
+time.sleep(1)
+EggNogg.setSpeed(60)
+print("Current speed %d" % EggNogg.getSpeed())
 
 while True:
 	#time.sleep(1)
 	#print(EggNogg.getGameState())
 	e = EggNogg.getGameState()
-	print(e['player1']['pos_x'], '\n', e['player2']['pos_x'],'\n')
+	print(e['player1'].keys())
+	break

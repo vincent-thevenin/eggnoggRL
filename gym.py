@@ -8,9 +8,9 @@ import torchvision.transforms as transforms
 from xdo import Xdo
 from time import sleep
 import torch
-from network import Observation
 from torch.distributions.categorical import Categorical
 import pyautogui
+import pyeggnogg as EggNogg
 
 class EggnoggGym():
     """
@@ -23,52 +23,45 @@ class EggnoggGym():
         monitor (dict): the coodinates of the screen :top, left, width, height
         sct (func): <function mss.factory.mss(**kwargs)>
     """    
-    def __init__(self, need_pretrained, device):
-        # xwininfo -name eggnoggplus
-        self.monitor = {"top": 57, "left": 67, "width": 480, "height":320}
-        self.sct = mss()
-        self.resize_factor = self.monitor['width']//480 #width 480, height 320
-        self.pil2tensor = transforms.ToTensor()
+    def __init__(self, need_pretrained, device, lib_path, executable_path, speed=60):
+        self.keys_tensor = torch.tensor([i for i in range(64)])
+        self.action_tensor = torch.tensor([i for i in range(13)])
         self.device = device
 
+        #launch game
+        EggNogg.init(lib_path, executable_path)
+        sleep(1)
+        EggNogg.setSpeed(speed)
 
-        self.delay = int(130e3)
-        self.xdo = Xdo()
-        self.win_id = max(self.xdo.search_windows(winname=b'eggnoggplus'))
-
-        #swap to window
-        self.xdo.activate_window(self.win_id)
-        self.xdo.send_keysequence_window_down(self.win_id, b'v')
-        self.xdo.send_keysequence_window_up(self.win_id, b'v')
-
-        #init observation network
-        self.observation = Observation(need_pretrained=need_pretrained).to(device)
-
-        #init noop prev_action
+        #init noop prev_action and room
         self.prev_action = [[2,2], #x_action
                             [2,2], #y_action
                             [False, False], #jump_action
                             [False, False]] #stab_action
+        self.current_room = 0.5
 
         #grab first 8 frames
         self.states = self.get_single_state()[0]
         for _ in range(7):
-            self.states = torch.cat((self.states, self.get_single_state()[0]), dim=2) # pylint: disable=no-member
+            self.states = torch.cat((self.states, # pylint: disable=no-member
+                                        self.get_single_state()[0]),
+                                    dim=1)
 
-
-
-    def act(self, action_tensors):
+    def act(self, action_tensors1, action_tensors2):
         #Transforms action_tensor to string for xdo
         #coord: 0 -> left, right, noop (right,left,noop for player2)
         #       1 -> up, down, noop
         #       2 -> jump press
         #       3 -> stab press
-        x_action = Categorical(action_tensors[0]).sample()
-        y_action = Categorical(action_tensors[1]).sample()
+        x_action = [Categorical(action_tensors1[0]).sample(),
+                    Categorical(action_tensors2[0]).sample()]
+        y_action = [Categorical(action_tensors1[1]).sample(),
+                    Categorical(action_tensors2[1]).sample()]
         
-        jump_action = action_tensors[2] < torch.rand((2,1), device=self.device)# pylint: disable=no-member
-        stab_action = action_tensors[3] < torch.rand((2,1), device=self.device)# pylint: disable=no-member
-
+        jump_action = [action_tensors1[2] < torch.rand((1,1), device=self.device), # pylint: disable=no-member
+                        action_tensors2[2] < torch.rand((1,1), device=self.device)]# pylint: disable=no-member
+        stab_action = [action_tensors1[3] < torch.rand((1,1), device=self.device), # pylint: disable=no-member
+                        action_tensors2[3] < torch.rand((1,1), device=self.device)]# pylint: disable=no-member
         string_press = []
         string_lift = []
 
@@ -81,9 +74,9 @@ class EggnoggGym():
             string_lift.extend(['q','d'])
 
         if x_action[1] == 0:
-            string_press.append('right') #reversed
+            string_press.append('right')
         elif x_action[1] == 1:
-            string_press.append('left') #reversed
+            string_press.append('left')
         elif x_action[1] == 2 or x_action[1] != self.prev_action[0][1]:
             string_lift.extend(['left','right'])
 
@@ -136,62 +129,107 @@ class EggnoggGym():
 
 
     def get_single_state(self):
-        with self.sct:
-            sct_img = self.sct.grab(self.monitor)
-    
-            # Create the Image
-            state = Image.frombytes("RGB",
-                                  sct_img.size,
-                                  sct_img.bgra,
-                                  "raw",
-                                  "BGRX")
-            state = state.resize((state.size[0]//self.resize_factor,
-                              state.size[1]//self.resize_factor))
-            state = self.pil2tensor(state)
+        state_dict = EggNogg.getGameState()
+        p1_life = (state_dict['player1']['life']-50)/50 #[0,100]
+        p2_life = (state_dict['player2']['life']-50)/50
 
-            r1 = r2 = 0
-            is_terminal = False
-            """#green player on transition
-            if torch.sum(state[1, :, state.shape[2]-1] == 1.0):
-                r1 = 1.0
-                r2 = -1.0
-            #red player on transition
-            if torch.sum(state[0, :, 1] == 1.0):
-                r1 = -1.0
-                r2 = 1.0"""
-            #green pixels in middle of screen
-            green = torch.sum(state[1, :, state.shape[2]//3:state.shape[2]*2//3] == 1.0)
-            #red pixels in middle of screen
-            red = torch.sum(state[0, :, state.shape[2]//3:state.shape[2]*2//3] == 1.0)
-            if green and not red:
-                r1 = 1
-            elif red and not green:
-                r1 = -1
-            else:
-                r1 = 0
-            r2 = -r1
-            #p1 wins, red water, bottom right
-            if state[0, state.shape[1]-1, state.shape[2]-1] == 1.0:
-                is_terminal = True
-                r1 = 1000.0
-                r2 = -1000.0
-            #p2 wins, green water, bottom left
-            elif state[1, state.shape[1]-1, 0] == 1.0:
-                is_terminal = True
-                r1 = -1000.0
-                r2 = 1000.0
+        p1_x = (state_dict['player1']['pos_x']-2904)/2904 #[0, 5808]
+        p2_x = (state_dict['player2']['pos_x']-2904)/2904
             
-            state = state.unsqueeze(0)
-            #b,3,320,480
-            state = state.unsqueeze(2)
-            #b,3,1,320,480
+        p1_y = (state_dict['player1']['pos_y']-89)/89 #[0,178]
+        p2_y = (state_dict['player2']['pos_y']-89)/89
 
-            #flip image and swap red and green channels
-            state_inversed = state.flip([-1])[:,[1,0,2],:,:,:]
+        p1_has_sword = (state_dict['player1']['hasSword']-0.5)/0.5 #bool
+        p2_has_sword = (state_dict['player2']['hasSword']-0.5)/0.5
 
-            #cat state and inversed on batch dimension
-            state = torch.cat((state, state_inversed), dim=0)# pylint: disable=no-member
-        return state.to(self.device).detach_(), (r1, r2), is_terminal
+        p1_sword_x = (state_dict['player1']['sword_pos_x']-2904)/2904 #[0, 5808]
+        p2_sword_x = (state_dict['player2']['sword_pos_x']-2904)/2904
+        
+        p1_sword_y = (state_dict['player1']['sword_pos_y']-89)/89 #[0,178]
+        p2_sword_y = (state_dict['player2']['sword_pos_y']-89)/89
+
+        p1_direction = state_dict['player1']['direction']/1 #[-1,1]
+        p2_direction = state_dict['player2']['direction']/1
+
+        p1_bounce_ctr = (state_dict['player1']['bounce_ctr']-2)/2 #[0,4]
+        p2_bounce_ctr = (state_dict['player2']['bounce_ctr']-2)/2
+
+        p1_situation = (state_dict['player1']['situation']-4)/4 #{0,1,8}
+        p2_situation = (state_dict['player2']['situation']-4)/4
+
+        p1_action = (self.action_tensor == state_dict['player1']['action']).float().reshape(1,1,13) #1,1,13
+        p2_action = (self.action_tensor == state_dict['player2']['action']).float().reshape(1,1,13)
+
+        p1_keys_pressed = (self.keys_tensor == state_dict['player1']['keys_pressed']).float().reshape(1,1,64) #1,1,64
+        p2_keys_pressed = (self.keys_tensor == state_dict['player2']['keys_pressed']).float().reshape(1,1,64)
+
+        leader = (state_dict['leader']-1)/1
+        room_number = (state_dict['room_number']-5)/5
+        #nb_swords = (state_dict['nb_swords'])
+        swords = torch.zeros((1,1,16*3))
+        for i, swordkey in enumerate(list(state_dict['swords'].keys())):
+            swords[0,0,i*3+0] = (state_dict['swords'][swordkey]['pos_x']-2904)/2904
+            swords[0,0,i*3+1] = (state_dict['swords'][swordkey]['pos_y']-89)/89
+            swords[0,0,i*3+2] = 1.0
+        
+        state = torch.tensor([
+            p1_life,
+            p2_life,
+            p1_x,
+            p2_x,
+            p1_y,
+            p2_y,
+            p1_has_sword,
+            p2_has_sword,
+            p1_sword_x,
+            p2_sword_x,
+            p1_sword_y,
+            p2_sword_y,
+            p1_direction,
+            p2_direction,
+            p1_bounce_ctr,
+            p2_bounce_ctr,
+            p1_situation,
+            p2_situation,
+            leader,
+            room_number
+        ])
+        state = state.reshape(1,1,state.shape[0])
+        
+        state = torch.cat(
+            (
+                state,
+                p1_action,
+                p2_action,
+                p1_keys_pressed,
+                p2_keys_pressed,
+                swords
+            ),
+            dim=2
+        )
+        #1,1,222
+
+        #inversed
+        #TODO keys_pressed how to reverse?
+        #state2 = state[:,[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,18,19]]
+        #state2[:,[2,3,8,9,12,13,18,19]] *= -1
+
+        #calculate reward
+        if room_number == self.current_room:
+            r1 = r2 = 0
+        elif room_number > self.current_room:
+            r1 = 1
+            r2 = -1
+        else:
+            r1 = -1
+            r2 = 1
+        self.current_room = room_number
+
+        #check terminal
+        is_terminal = (room_number == 1.0) or (room_number == -1.0)
+            
+
+        return state, (r1, r2), is_terminal
 
 
     def reset(self):
@@ -204,19 +242,32 @@ class EggnoggGym():
         pyautogui.keyDown('f5')
         pyautogui.keyUp('f5')
 
-    def step(self, action_tensor):
-        #remove oldest state
-        self.states = self.states.split([1,7], dim=2)[1]
-        #2,3,7,320,480
+        #init noop prev_action and room
+        self.prev_action = [[2,2], #x_action
+                            [2,2], #y_action
+                            [False, False], #jump_action
+                            [False, False]] #stab_action
+        self.current_room = 0.5
 
-        #act
-        self.act(action_tensor)
+        #grab first 8 frames
+        self.states = self.get_single_state()[0]
+        for _ in range(7):
+            self.states = torch.cat((self.states, # pylint: disable=no-member
+                                        self.get_single_state()[0]),
+                                    dim=1)
 
-        #get state
-        state, reward, is_terminal = self.get_single_state()
+    def step(self, actions_tensor1, actions_tensor2):
+        with torch.autograd.no_grad():
+            #remove oldest state
+            self.states = self.states.split([1,7], dim=1)[1]
+            #b,7,x
 
-        self.states = torch.cat((self.states, state), dim=2)# pylint: disable=no-member
-        #2,3,8,320,480
-        obs = self.observation(self.states)
+            #act
+            self.act(actions_tensor1, actions_tensor2)
 
-        return obs, reward, is_terminal
+            #get state
+            state, reward, is_terminal = self.get_single_state()
+
+            self.states = torch.cat((self.states, state), dim=1)# pylint: disable=no-member
+            #b,8,x
+        return self.states, reward, is_terminal

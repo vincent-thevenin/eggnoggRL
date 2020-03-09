@@ -14,27 +14,23 @@ class PerfPolicy(nn.Module):
             actions_choice: list of tensors from gym.prev_actions"""
         
         perf_player = 1
-        perf_advers = 1
 
         for i in range(2): #x, y actions
-            perf_player = perf_player * actions_prob[i][0, actions_choice[i][0]]
-            perf_advers = perf_advers * actions_prob[i][1, actions_choice[i][1]]
+            perf_player = perf_player * actions_prob[i][0, actions_choice[i][G_idx]]
 
         #True -> p(choice)
         #False -> 1-p(choice) because sigmoid gives probs of jump and stab
         for i in range(2,4):
-            perf_player = perf_player * (~actions_choice[i][0] + (2*actions_choice[i][0]-1) * actions_prob[i][0])
-            perf_advers = perf_advers * (~actions_choice[i][1] + (2*actions_choice[i][1]-1) * actions_prob[i][1])
+            perf_player = perf_player * (~actions_choice[i][G_idx] + (2*actions_choice[i][G_idx]-1) * actions_prob[i][0])
 
         perf_player = (perf_player + self.eps)
-        perf_advers = (perf_advers + self.eps)
 
-        perf = torch.log((perf_player / perf_advers)**(-2*G_idx + 1)) #pylint: disable=no-member
+        perf = torch.log(perf_player) #pylint: disable=no-member
         return I * delta * perf
 
 class PerfValue(nn.Module):
     def __init__(self):
         super(PerfValue, self).__init__()
     
-    def forward(self, delta, v_old, G_idx):
-        return delta * (v_old[G_idx] - v_old[(G_idx+1)%2])  #gradient ascent
+    def forward(self, delta, v_old):
+        return delta * v_old

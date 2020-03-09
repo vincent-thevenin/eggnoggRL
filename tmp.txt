@@ -1,0 +1,22 @@
+player1
+	life: [0-100]
+	pos_x: [0,5808] #need reverse
+	pos_y: [0,178]
+	hasSword: [bool]
+	'sword_pos_x': [0,5808] #need reverse
+	'sword_pos_y'
+	'direction': {-1,1}#need reverse
+	'bounce_ctr': [[0,4]]
+	'situation': {0,1,8} #ground, air, wall
+	'keys_pressed': [0,64?] #one hot
+	'action': [[0,12]] #one hot
+player2
+	SAME
+leader [[0,2]] #need reverse
+room_number [[0,10]] #need reverse
+total_room_number: 11
+nb_swords: [0,14]
+swords
+	sword[num]:
+		pos_x: [0,5808] #need reverse
+		pos_y: [0,178]

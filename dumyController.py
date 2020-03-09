@@ -10,8 +10,8 @@ BASEWIDTH = 40# width of the suares , diamater of the circles
 SCREENA= pg.Surface((BASEWIDTH*5,BASEWIDTH*3)) #pylint: disable=too-many-function-args
 # a temp surf for controller b
 SCREENB= pg.Surface((BASEWIDTH*5,BASEWIDTH*3)) #pylint: disable=too-many-function-args
-LISTA = ['z','q','s','d','v','b']#the controls for a  
-LISTB = ['z','q','s','d','v','b']#the controls for b
+LISTA = ['z','q','s','d','c','v']#the controls for a  
+LISTB = ['o','k','l','m','n',',']#the controls for b
 #! order of controlls must be preserved !!!
 #* order is : up,left,down,right,jump,punch
 COLORA = (255,0,0) #color of controller a
@@ -135,7 +135,7 @@ def onpress(key):
         listpress(key,llist[0],llist[1],llist[2]) # draw according to presses
     screen.blit(SCREENA,(0,0))#draw the left controller's temp surf to the screen
     screen.blit(SCREENB,(BASEWIDTH*5+10,0)) # draw the right controllers temp surf to the screen at the right of the left temp surf
-    pg.display.flip() # update the screen to be shown
+    #pg.display.flip() # update the screen to be shown
     
 
 def onrelease(key):
@@ -149,7 +149,7 @@ def onrelease(key):
         listrelease(key,llist[0],llist[1],llist[2])#draw according to releases
     screen.blit(SCREENA,(0,0))#draw controller to screen
     screen.blit(SCREENB,(BASEWIDTH*5+10,0)) #draw conroller to d=screen
-    pg.display.flip()#show the screen
+    #pg.display.flip()#show the screen
 
 def default():
     """
@@ -170,8 +170,8 @@ def runloop():
                     if event.type == pg.QUIT:# pylint: disable=no-member
                             done = True
                             sys.exit()
-        time.sleep(1)# sleep one second to keep the cpu consumtion low, means that it takes a second to close
-
+        #time.sleep(1)# sleep one second to keep the cpu consumtion low, means that it takes a second to close
+        pg.display.flip()
 
 if __name__ == "__main__":
     """

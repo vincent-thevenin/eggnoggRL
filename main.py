@@ -69,7 +69,7 @@ try:
         #INITS
         is_terminal = False
         
-        steps = green_reward_sum = 0
+        steps = p1_reward_sum = p2_reward_sum = 0
         I = 1
         state = gym.states
         state = state.to(gpu)
@@ -118,12 +118,24 @@ try:
                 state = state_new
 
                 stop = datetime.now()
-                """for a in actions1:
+                for a in actions1:
                     print(a)
                 for a in actions2:
                     print(a)
-                print('delta2:',delta2.item(), '\n',
+                print(
+                    f"{delta1.item()=:.6f}\n"
+                    f"{delta2.item()=:.6f}\n"
+                    f"{v1_old.item()=:.6f}\n"
+                    f"{v2_old.item()=:.6f}\n"
+                    f"{v1_new.item()=:.6f}\n"
+                    f"{v2_new.item()=:.6f}\n"
+                    f"{steps=}"
+                )
+                """print('delta1', delta1.item(), '\n',
+                    'delta2:',delta2.item(), '\n',
+                    'v1_old:',v1_old.item(), '\n',
                     'v2_old:',v2_old.item(), '\n',
+                    'v1_new:',v1_new.item(), '\n',
                     'v2_new:',v2_new.item(), '\n',
                     'steps:',steps)"""
                 """if reward[0] > reward[1]:
@@ -132,10 +144,11 @@ try:
                     print('E')
                 else:
                     print('R')"""
-                """green_reward_sum += I*reward[1]
-                print('red_reward_sum:', green_reward_sum)
-                print('undiscounted_reward:', reward[1])"""
-                print('time/step:',stop-start)
+                p1_reward_sum += I*reward[0]
+                p2_reward_sum 
+                print('p1_reward_sum:', p1_reward_sum)
+                #print('undiscounted_reward:', reward[1])
+                #print('time/step:',stop-start)
                 print()
         episode += 1
         print(episode, steps)

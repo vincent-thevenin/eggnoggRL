@@ -28,23 +28,14 @@ class EggnoggGym():
         self.action_tensor = torch.tensor([i for i in range(13)])
         self.device = device
         self.seq_len = seq_len
+        self.gym_keys = ['z','q','s','d','c','v','o','k','l','m','n',',']
 
         #launch game
         EggNogg.init(lib_path, executable_path)
         sleep(5)
         EggNogg.setSpeed(speed)
-        pyautogui.keyUp('z')
-        pyautogui.keyUp('q')
-        pyautogui.keyUp('s')
-        pyautogui.keyUp('d')
-        pyautogui.keyUp('c')
-        pyautogui.keyUp('v')
-        pyautogui.keyUp('n')
-        pyautogui.keyUp(',')
-        pyautogui.keyUp('o')
-        pyautogui.keyUp('k')
-        pyautogui.keyUp('l')
-        pyautogui.keyUp('m')
+        for key in self.gym_keys:
+            pyautogui.keyUp(key)
 
         #init noop prev_action and room
         self.prev_action = [[2,2], #x_action
@@ -246,18 +237,8 @@ class EggnoggGym():
 
 
     def reset(self):
-        pyautogui.keyUp('z')
-        pyautogui.keyUp('q')
-        pyautogui.keyUp('s')
-        pyautogui.keyUp('d')
-        pyautogui.keyUp('v')
-        pyautogui.keyUp('b')
-        pyautogui.keyUp('n')
-        pyautogui.keyUp(',')
-        pyautogui.keyUp('up')
-        pyautogui.keyUp('left')
-        pyautogui.keyUp('down')
-        pyautogui.keyUp('right')
+        for key in self.gym_keys:
+            pyautogui.keyUp(key)
 
         pyautogui.keyDown('f5')
         pyautogui.keyUp('f5')

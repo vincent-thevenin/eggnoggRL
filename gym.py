@@ -62,10 +62,10 @@ class EggnoggGym():
         y_action = [Categorical(action_tensors1[1]).sample(),
                     Categorical(action_tensors2[1]).sample()]
         
-        jump_action = [action_tensors1[2] < torch.rand((1,1), device=self.device), # pylint: disable=no-member
-                        action_tensors2[2] < torch.rand((1,1), device=self.device)]# pylint: disable=no-member
-        stab_action = [action_tensors1[3] < torch.rand((1,1), device=self.device), # pylint: disable=no-member
-                        action_tensors2[3] < torch.rand((1,1), device=self.device)]# pylint: disable=no-member
+        jump_action = [action_tensors1[2] > torch.rand((1,1), device=self.device), # pylint: disable=no-member
+                        action_tensors2[2] > torch.rand((1,1), device=self.device)]# pylint: disable=no-member
+        stab_action = [action_tensors1[3] > torch.rand((1,1), device=self.device), # pylint: disable=no-member
+                        action_tensors2[3] > torch.rand((1,1), device=self.device)]# pylint: disable=no-member
         string_press = []
         string_lift = []
 

@@ -30,8 +30,16 @@ class EggnoggGym():
 
         #launch game
         EggNogg.init(lib_path, executable_path)
-        sleep(1)
+        sleep(5)
         EggNogg.setSpeed(speed)
+        pyautogui.keyUp('z')
+        pyautogui.keyUp('q')
+        pyautogui.keyUp('s')
+        pyautogui.keyUp('d')
+        pyautogui.keyUp('v')
+        pyautogui.keyUp('b')
+        pyautogui.keyUp('n')
+        pyautogui.keyUp(',')
 
         #init noop prev_action and room
         self.prev_action = [[2,2], #x_action
@@ -74,9 +82,9 @@ class EggnoggGym():
             string_lift.extend(['q','d'])
 
         if x_action[1] == 0:
-            string_press.append('right')
-        elif x_action[1] == 1:
             string_press.append('left')
+        elif x_action[1] == 1:
+            string_press.append('right')
         elif x_action[1] == 2 or x_action[1] != self.prev_action[0][1]:
             string_lift.extend(['left','right'])
 
@@ -233,7 +241,14 @@ class EggnoggGym():
 
 
     def reset(self):
-        pyautogui.write('zqsdvbn,')
+        pyautogui.keyUp('z')
+        pyautogui.keyUp('q')
+        pyautogui.keyUp('s')
+        pyautogui.keyUp('d')
+        pyautogui.keyUp('v')
+        pyautogui.keyUp('b')
+        pyautogui.keyUp('n')
+        pyautogui.keyUp(',')
         pyautogui.keyUp('up')
         pyautogui.keyUp('left')
         pyautogui.keyUp('down')

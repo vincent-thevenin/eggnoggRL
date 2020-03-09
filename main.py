@@ -11,8 +11,8 @@ from math import sqrt, exp, log
 import sys
 
 #params
-min_I = 1e-5
-max_steps = 100
+min_I = 1e-3
+max_steps = 2000
 gamma = exp(log(min_I)/max_steps)
 print(gamma)
 path_to_chkpt = 'weights.tar'
@@ -53,9 +53,9 @@ V2.to(gpu)
 
 #optimizer
 optimizerP = optim.SGD(params= list(P1.parameters())+list(P2.parameters()),
-                        lr=1e-5)
+                        lr=1e0)
 optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
-                        lr=4e-5)
+                        lr=1e-2)
 
 
 #############################################################################
@@ -118,22 +118,24 @@ try:
                 state = state_new
 
                 stop = datetime.now()
-                """for a in actions:
-                    print(a)"""
-                """print('delta:',delta.item(), '\n',
-                    'v_old:',v_old, '\n',
-                    'v_new:',v_new, '\n',
+                for a in actions1:
+                    print(a)
+                for a in actions2:
+                    print(a)
+                print('delta2:',delta2.item(), '\n',
+                    'v2_old:',v2_old.item(), '\n',
+                    'v2_new:',v2_new.item(), '\n',
                     'steps:',steps)
-                if reward[0] > reward[1]:
+                """if reward[0] > reward[1]:
                     print('G')
                 elif reward[0] == reward[1]:
                     print('E')
                 else:
                     print('R')"""
-                """green_reward_sum += I*reward[0]
-                print('green_reward_sum:', green_reward_sum)
-                print('undiscounted_reward:', reward[0])"""
-                print('time/step:',stop-start)
+                green_reward_sum += I*reward[1]
+                print('red_reward_sum:', green_reward_sum)
+                print('undiscounted_reward:', reward[1])
+                #print('time/step:',stop-start)
                 print()
         episode += 1
         print(episode, steps)

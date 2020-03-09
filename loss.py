@@ -5,7 +5,7 @@ class PerfPolicy(nn.Module):
     def __init__(self):
         super(PerfPolicy, self).__init__()
         self.eps = 1e-6
-    def forward(self, delta, I, actions_prob, actions_choice, G_idx):
+    def forward(self, I, actions_prob, actions_choice, G_idx):
         """returns performance
         Args:
             delta: no_grad float
@@ -24,7 +24,7 @@ class PerfPolicy(nn.Module):
             perf_player = perf_player * (~actions_choice[i][G_idx] + (2*actions_choice[i][G_idx]-1) * actions_prob[i][0])
 
         perf = torch.log(perf_player+self.eps) #pylint: disable=no-member
-        return I * delta * perf
+        return I * perf
 
 class PerfValue(nn.Module):
     def __init__(self):

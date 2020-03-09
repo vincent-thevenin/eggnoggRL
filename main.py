@@ -13,6 +13,8 @@ import sys
 #params
 min_I = 1e-3
 max_steps = 2000
+lambda_policy = 0.8
+lambda_value = 0.8
 gamma = exp(log(min_I)/max_steps)
 print(gamma)
 path_to_chkpt = 'weights.tar'
@@ -72,23 +74,33 @@ try:
         steps = p1_reward_sum = p2_reward_sum = 0
         I = 1
         state = gym.states
-        state = state.to(gpu)
-        state.requires_grad_()
+        stateP1, stateP2, stateV1, stateV2 = (
+            state.to(gpu),
+            state.to(gpu),
+            state.to(gpu),
+            state.to(gpu)
+        )
+        stateP1.requires_grad_()
+        stateP2.requires_grad_()
+        stateV1.requires_grad_()
+        stateV2.requires_grad_()
+        z_policy1 = z_policy2 = 0 #eligibility trace for policy
+        z_value1 = z_value2 = 0 #eligibility trace for value function
 
         with torch.enable_grad():
             while not is_terminal:
                 start = datetime.now()
 
                 steps += 1
-                actions1 = P1(state)
-                actions2 = P2(state)
+                actions1 = P1(stateP1)
+                actions2 = P2(stateP2)
                 state_new, reward, is_terminal = gym.step(actions1, actions2)
                 state_new = state_new.to(gpu)
                 if steps%max_steps == 0:
                     is_terminal = True
 
-                v1_old = V1(state)#.detach())
-                v2_old = V2(state)#.detach())
+                v1_old = V1(stateV1)#.detach())
+                v2_old = V2(stateV2)#.detach())
                 with torch.autograd.no_grad():
                     #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
                     if not is_terminal:
@@ -100,17 +112,29 @@ try:
                         delta1 = reward[0] - v1_old
                         delta2 = reward[1] - v2_old
 
-                perf_v = Perf_v(delta1, v1_old) + Perf_v(delta2, v2_old)
-                #(-perf_v).backward() #gradient ascent
-                
-                perf_p = Perf_p(delta1, I, actions1, gym.prev_action, 0) + Perf_p(delta2, I, actions2, gym.prev_action, 1)
-                #(-perf_p).backward() #gradient ascent
-                
-                perf = -(perf_v + perf_p) #gradient ascent
-                perf.backward()
-                optimizerV.step()
-                optimizerP.step()
+                """perf_v = Perf_v(delta1, v1_old) + Perf_v(delta2, v2_old)
+                (-perf_v).backward() #gradient ascent"""
+                v1_old.backward()
+                z_value1 = gamma*lambda_value*z_value1 + stateV1.grad
+                stateV1.grad = -1*delta1*z_value1 #gradiet ascent
 
+                v2_old.backward()
+                z_value2 = gamma*lambda_value*z_value2 + stateV2.grad
+                stateV2.grad = -1*delta2*z_value2 #gradiet ascent
+
+                optimizerV.step()
+
+                perf_p1 = Perf_p(I, actions1, gym.prev_action, 0)
+                perf_p1.backward()
+                z_policy1 = gamma*lambda_policy*z_policy1 + stateP1.grad
+                stateP1.grad = -1*delta1*z_policy1
+
+                perf_p2 = Perf_p(I, actions2, gym.prev_action, 0)
+                perf_p2.backward()
+                z_policy2 = gamma*lambda_policy*z_policy2 + stateP2.grad
+                stateP2.grad = -1*delta2*z_policy2
+                
+                optimizerP.step()
 
                 optimizerV.zero_grad()
                 optimizerP.zero_grad()

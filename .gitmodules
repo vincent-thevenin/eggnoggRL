@@ -1,0 +1,3 @@
+[submodule "libeggnogg"]
+	path = libeggnogg
+	url = https://github.com/0xUKN/libeggnogg.git

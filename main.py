@@ -63,7 +63,7 @@ optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
 ##############################################################################
 
 #init gym
-gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, 180)
+gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=600, seq_len=16)
 try:
     while True:
         #INITS
@@ -118,24 +118,24 @@ try:
                 state = state_new
 
                 stop = datetime.now()
-                for a in actions1:
+                """for a in actions1:
                     print(a)
                 for a in actions2:
                     print(a)
                 print('delta2:',delta2.item(), '\n',
                     'v2_old:',v2_old.item(), '\n',
                     'v2_new:',v2_new.item(), '\n',
-                    'steps:',steps)
+                    'steps:',steps)"""
                 """if reward[0] > reward[1]:
                     print('G')
                 elif reward[0] == reward[1]:
                     print('E')
                 else:
                     print('R')"""
-                green_reward_sum += I*reward[1]
+                """green_reward_sum += I*reward[1]
                 print('red_reward_sum:', green_reward_sum)
-                print('undiscounted_reward:', reward[1])
-                #print('time/step:',stop-start)
+                print('undiscounted_reward:', reward[1])"""
+                print('time/step:',stop-start)
                 print()
         episode += 1
         print(episode, steps)

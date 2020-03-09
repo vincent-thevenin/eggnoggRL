@@ -5,13 +5,13 @@ from torchvision.models import resnet18
 class Policy(nn.Module):
     def __init__(self):
         super(Policy, self).__init__()
-        #b, 8, 222
+        #b, 8, 106
         self.relu = nn.LeakyReLU()
         self.sigmoid = nn.Sigmoid()
         self.softmax = nn.Softmax(dim=1)
 
         self.lstm = nn.LSTM(
-            input_size=222,
+            input_size=106,
             hidden_size=512, 
             batch_first=True, 
             bidirectional=False)
@@ -70,7 +70,7 @@ class Value(nn.Module):
         self.relu = nn.LeakyReLU()
 
         self.lstm = nn.LSTM(
-            input_size=222,
+            input_size=106,
             hidden_size=512, 
             batch_first=True, 
             bidirectional=False)
@@ -90,7 +90,7 @@ class Value(nn.Module):
 
     def forward(self, state):
         #b,8,2
-        _, (out, cn) = self.lstm(state)
+        _, (out, _) = self.lstm(state)
         #b,1,512
 
         out = out.squeeze(1)

@@ -23,10 +23,11 @@ class EggnoggGym():
         monitor (dict): the coodinates of the screen :top, left, width, height
         sct (func): <function mss.factory.mss(**kwargs)>
     """    
-    def __init__(self, need_pretrained, device, lib_path, executable_path, speed=60):
-        self.keys_tensor = torch.tensor([i for i in range(64)])
+    def __init__(self, need_pretrained, device, lib_path, executable_path, speed=60, seq_len=8):
+        self.keys_tensor = torch.tensor([2**i for i in range(6)])
         self.action_tensor = torch.tensor([i for i in range(13)])
         self.device = device
+        self.seq_len = seq_len
 
         #launch game
         EggNogg.init(lib_path, executable_path)
@@ -36,10 +37,14 @@ class EggnoggGym():
         pyautogui.keyUp('q')
         pyautogui.keyUp('s')
         pyautogui.keyUp('d')
+        pyautogui.keyUp('c')
         pyautogui.keyUp('v')
-        pyautogui.keyUp('b')
         pyautogui.keyUp('n')
         pyautogui.keyUp(',')
+        pyautogui.keyUp('o')
+        pyautogui.keyUp('k')
+        pyautogui.keyUp('l')
+        pyautogui.keyUp('m')
 
         #init noop prev_action and room
         self.prev_action = [[2,2], #x_action
@@ -50,7 +55,7 @@ class EggnoggGym():
 
         #grab first 8 frames
         self.states = self.get_single_state()[0]
-        for _ in range(7):
+        for _ in range(self.seq_len-1):
             self.states = torch.cat((self.states, # pylint: disable=no-member
                                         self.get_single_state()[0]),
                                     dim=1)
@@ -82,11 +87,11 @@ class EggnoggGym():
             string_lift.extend(['q','d'])
 
         if x_action[1] == 0:
-            string_press.append('left')
+            string_press.append('k')
         elif x_action[1] == 1:
-            string_press.append('right')
+            string_press.append('m')
         elif x_action[1] == 2 or x_action[1] != self.prev_action[0][1]:
-            string_lift.extend(['left','right'])
+            string_lift.extend(['k','m'])
 
         #y action
         if y_action[0] == 0:
@@ -97,17 +102,17 @@ class EggnoggGym():
             string_lift.extend(['z','s'])
 
         if y_action[1] == 0:
-            string_press.append('up')
+            string_press.append('o')
         elif y_action[1] == 1:
-            string_press.append('down')
+            string_press.append('l')
         elif y_action[1] == 2 or y_action[1] != self.prev_action[1][1]:
-            string_lift.extend(['up','down'])
+            string_lift.extend(['o','l'])
         
         #jump action
         if jump_action[0]:
-            string_press.append('v')
+            string_press.append('c')
         else:
-            string_lift.append('v')
+            string_lift.append('c')
 
         if jump_action[1]:
             string_press.append('n')
@@ -116,9 +121,9 @@ class EggnoggGym():
         
         #stab action
         if stab_action[0]:
-            string_press.append('b')
+            string_press.append('v')
         else:
-            string_lift.append('b')
+            string_lift.append('v')
         
         if stab_action[1]:
             string_press.append(',')
@@ -168,8 +173,8 @@ class EggnoggGym():
         p1_action = (self.action_tensor == state_dict['player1']['action']).float().reshape(1,1,13) #1,1,13
         p2_action = (self.action_tensor == state_dict['player2']['action']).float().reshape(1,1,13)
 
-        p1_keys_pressed = (self.keys_tensor == state_dict['player1']['keys_pressed']).float().reshape(1,1,64) #1,1,64
-        p2_keys_pressed = (self.keys_tensor == state_dict['player2']['keys_pressed']).float().reshape(1,1,64)
+        p1_keys_pressed = ((self.keys_tensor & state_dict['player1']['keys_pressed']) != 0).float().reshape(1,1,6) #1,1,6
+        p2_keys_pressed = ((self.keys_tensor & state_dict['player2']['keys_pressed']) != 0).float().reshape(1,1,6)
 
         leader = (state_dict['leader']-1)/1
         room_number = (state_dict['room_number']-5)/5
@@ -215,7 +220,7 @@ class EggnoggGym():
             ),
             dim=2
         )
-        #1,1,222
+        #1,1,106
 
         #inversed
         #TODO keys_pressed how to reverse?
@@ -264,9 +269,9 @@ class EggnoggGym():
                             [False, False]] #stab_action
         self.current_room = 0.5
 
-        #grab first 8 frames
+        #grab first seq_len frames
         self.states = self.get_single_state()[0]
-        for _ in range(7):
+        for _ in range(self.seq_len-1):
             self.states = torch.cat((self.states, # pylint: disable=no-member
                                         self.get_single_state()[0]),
                                     dim=1)
@@ -274,7 +279,7 @@ class EggnoggGym():
     def step(self, actions_tensor1, actions_tensor2):
         with torch.autograd.no_grad():
             #remove oldest state
-            self.states = self.states.split([1,7], dim=1)[1]
+            self.states = self.states.split([1,self.seq_len-1], dim=1)[1]
             #b,7,x
 
             #act

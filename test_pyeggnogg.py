@@ -18,5 +18,4 @@ while True:
 	#time.sleep(1)
 	#print(EggNogg.getGameState())
 	e = EggNogg.getGameState()
-	print(e['player1'].keys())
-	break
+	print(e['player1']['life'])

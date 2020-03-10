@@ -218,7 +218,7 @@ class EggnoggGym():
         #state2 = state[:,[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,18,19]]
         #state2[:,[2,3,8,9,12,13,18,19]] *= -1
 
-        #calculate reward
+        #calculate gradual reward
         if room_number == self.current_room:
             r1 = r2 = 0
         elif room_number > self.current_room:
@@ -228,6 +228,16 @@ class EggnoggGym():
             r1 = -1
             r2 = 1
         self.current_room = room_number
+        """#calculate one reward
+        if room_number == 1.0:
+            r1 = 1
+            r2 = -1
+        elif room_number == -1.0:
+            r1 = -1
+            r2 = 1
+        else:
+            r1 = 0
+            r2 = 0"""
 
         #check terminal
         is_terminal = (room_number == 1.0) or (room_number == -1.0)

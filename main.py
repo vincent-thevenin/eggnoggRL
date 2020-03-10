@@ -11,10 +11,10 @@ from math import sqrt, exp, log
 import sys
 
 #params
-min_I = 1e-3
+min_I = 1e-5
 max_steps = 2000
 lambda_policy = 0.8
-lambda_value = 0.8
+lambda_value = 0.5
 gamma = exp(log(min_I)/max_steps)
 print(gamma)
 path_to_chkpt = 'weights.tar'
@@ -55,9 +55,9 @@ V2.to(gpu)
 
 #optimizer
 optimizerP = optim.SGD(params= list(P1.parameters())+list(P2.parameters()),
-                        lr=1e0)
+                        lr=2**-7)
 optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
-                        lr=1e-2)
+                        lr=2**-9)
 
 
 #############################################################################
@@ -65,10 +65,11 @@ optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
 ##############################################################################
 
 #init gym
-gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=600, seq_len=16)
+gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=120, seq_len=32)
 try:
     while True:
         #INITS
+        start = datetime.now()
         is_terminal = False
         
         steps = p1_reward_sum = p2_reward_sum = 0
@@ -84,13 +85,13 @@ try:
         stateP2.requires_grad_()
         stateV1.requires_grad_()
         stateV2.requires_grad_()
-        z_policy1 = z_policy2 = 0 #eligibility trace for policy
-        z_value1 = z_value2 = 0 #eligibility trace for value function
+        z_policy1 = [0]*len(list(P1.parameters())) #eligibility trace for policy
+        z_policy2 = [0]*len(list(P2.parameters()))
+        z_value1 = [0]*len(list(V1.parameters()))
+        z_value2 = [0]*len(list(V2.parameters())) #eligibility trace for value function
 
         with torch.enable_grad():
             while not is_terminal:
-                start = datetime.now()
-
                 steps += 1
                 actions1 = P1(stateP1)
                 actions2 = P2(stateP2)
@@ -112,27 +113,29 @@ try:
                         delta1 = reward[0] - v1_old
                         delta2 = reward[1] - v2_old
 
-                """perf_v = Perf_v(delta1, v1_old) + Perf_v(delta2, v2_old)
-                (-perf_v).backward() #gradient ascent"""
-                v1_old.backward()
-                z_value1 = gamma*lambda_value*z_value1 + stateV1.grad
-                stateV1.grad = -1*delta1*z_value1 #gradiet ascent
+                (v1_old).backward()
+                for i,p in enumerate(V1.parameters()):
+                    z_value1[i] = gamma*lambda_value*z_value1[i] + p.grad
+                    p.grad = -delta1*z_value1[i] #gradiet ascent
 
-                v2_old.backward()
-                z_value2 = gamma*lambda_value*z_value2 + stateV2.grad
-                stateV2.grad = -1*delta2*z_value2 #gradiet ascent
+                (v2_old).backward()
+                for i,p in enumerate(V2.parameters()):
+                    z_value2[i] = gamma*lambda_value*z_value2[i] + p.grad
+                    p.grad = -delta2*z_value2[i] #gradiet ascent
 
                 optimizerV.step()
 
                 perf_p1 = Perf_p(I, actions1, gym.prev_action, 0)
                 perf_p1.backward()
-                z_policy1 = gamma*lambda_policy*z_policy1 + stateP1.grad
-                stateP1.grad = -1*delta1*z_policy1
+                for i,p in enumerate(P1.parameters()):
+                    z_policy1[i] = gamma*lambda_policy*z_policy1[i] + p.grad
+                    p.grad = -delta1*z_policy1[i]
 
                 perf_p2 = Perf_p(I, actions2, gym.prev_action, 0)
                 perf_p2.backward()
-                z_policy2 = gamma*lambda_policy*z_policy2 + stateP2.grad
-                stateP2.grad = -1*delta2*z_policy2
+                for i,p in enumerate(P2.parameters()):
+                    z_policy2[i] = gamma*lambda_policy*z_policy2[i] + p.grad
+                    p.grad = -delta2*z_policy2[i]
                 
                 optimizerP.step()
 
@@ -140,10 +143,12 @@ try:
                 optimizerP.zero_grad()
 
                 I *= gamma
-                state = state_new
-                state.requires_grad_()
+                (stateV1,stateV2,stateP1,stateP2) = torch.split(state_new.repeat(4,1,1),1,dim=0)
+                stateV1.detach_().requires_grad_()
+                stateV2.detach_().requires_grad_()
+                stateP1.detach_().requires_grad_()
+                stateP2.detach_().requires_grad_()
 
-                stop = datetime.now()
                 if not steps%10:
                     for a in actions1:
                         print(a)
@@ -175,25 +180,27 @@ try:
                     p2_reward_sum 
                     print('p1_reward_sum:', p1_reward_sum)"""
                     #print('undiscounted_reward:', reward[1])
-                    #print('time/step:',stop-start)
                     print()
+        stop = datetime.now()
+        print('avg time/step:',(stop-start)/steps)
         episode += 1
         print(episode, steps)
         episode_len.append(steps)
         print('Finished')
         gym.reset()
-        print('Saving weights...')
-        torch.save({
-                'episode': episode,
-                'episode_len': episode_len,
-                'P1_state_dict': P1.state_dict(),
-                'P2_state_dict': P2.state_dict(),
-                'V1_state_dict': V1.state_dict(),
-                'V2_state_dict': V2.state_dict(),
-                'optimizerP': optimizerP.state_dict(),
-                'optimizerV': optimizerV.state_dict()
-                }, path_to_chkpt)
-        print('...Done')
+        if not episode%5:
+            print('Saving weights...')
+            torch.save({
+                    'episode': episode,
+                    'episode_len': episode_len,
+                    'P1_state_dict': P1.state_dict(),
+                    'P2_state_dict': P2.state_dict(),
+                    'V1_state_dict': V1.state_dict(),
+                    'V2_state_dict': V2.state_dict(),
+                    'optimizerP': optimizerP.state_dict(),
+                    'optimizerV': optimizerV.state_dict()
+                    }, path_to_chkpt)
+            print('...Done')
 except KeyboardInterrupt:
     gym.reset()
     sys.exit()

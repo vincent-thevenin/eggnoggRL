@@ -16,16 +16,15 @@ class PerfPolicy(nn.Module):
         perf_player = 1
 
         for i in range(2): #x, y actions
-            perf_player = perf_player * actions_prob[i][0, actions_choice[i][G_idx]]
+            perf_player = perf_player + actions_prob[i][0, actions_choice[i][G_idx]]
 
         #True -> p(choice)
         #False -> 1-p(choice) because sigmoid gives probs of jump and stab
-        perf_player = perf_player * (~actions_choice[2][G_idx] + (2*actions_choice[2][G_idx]-1) * actions_prob[2][0, 0])
+        perf_player = perf_player + (~actions_choice[2][G_idx] + (2*actions_choice[2][G_idx]-1) * actions_prob[2][0, 0])
 
-        perf_player = perf_player * actions_prob[3][0, actions_choice[3][G_idx]]
+        perf_player = perf_player + actions_prob[3][0, actions_choice[3][G_idx]]
         
-        perf = torch.log(perf_player+self.eps) #pylint: disable=no-member
-        return I * perf
+        return I * perf_player
 
 class PerfValue(nn.Module):
     def __init__(self):

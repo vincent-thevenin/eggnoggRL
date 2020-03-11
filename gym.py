@@ -36,6 +36,8 @@ class EggnoggGym():
         EggNogg.setSpeed(speed)
         for key in self.gym_keys:
             pyautogui.keyUp(key)
+        pyautogui.keyDown('n')
+        pyautogui.keyUp('n')
 
         #init noop prev_action, room, map, throwing
         self.prev_action = [[2,2], #x_action
@@ -60,17 +62,17 @@ class EggnoggGym():
         #       1 -> up, down, noop
         #       2 -> jump press
         #       3 -> stab press
-        x_action = [Categorical(action_tensors1[0]).sample(),
-                    Categorical(action_tensors2[0]).sample()]
+        x_action = [Categorical(torch.exp(action_tensors1[0])).sample(),
+                    Categorical(torch.exp(action_tensors2[0])).sample()]
 
-        y_action = [Categorical(action_tensors1[1]).sample(),
-                    Categorical(action_tensors2[1]).sample()]
+        y_action = [Categorical(torch.exp(action_tensors1[1])).sample(),
+                    Categorical(torch.exp(action_tensors2[1])).sample()]
 
-        jump_action = [action_tensors1[2] > torch.rand((1,1), device=self.device), # pylint: disable=no-member
-                        action_tensors2[2] > torch.rand((1,1), device=self.device)]# pylint: disable=no-member
+        jump_action = [torch.exp(action_tensors1[2]) > torch.rand((1,1), device=self.device), # pylint: disable=no-member
+                        torch.exp(action_tensors2[2]) > torch.rand((1,1), device=self.device)]# pylint: disable=no-member
         
-        stab_action = [Categorical(action_tensors1[3]).sample(), # pylint: disable=no-member
-                       Categorical(action_tensors2[3]).sample()]# pylint: disable=no-member
+        stab_action = [Categorical(torch.exp(action_tensors1[3])).sample(), # pylint: disable=no-member
+                       Categorical(torch.exp(action_tensors2[3])).sample()]# pylint: disable=no-member
         
         string_press = []
         string_lift = ['c','n']
@@ -119,7 +121,7 @@ class EggnoggGym():
         elif stab_action[0]==0 or stab_action[0]==1:
             string_lift.append('v')
             string_press.append('v')
-        elif stab_action[0]==2:
+        if stab_action[0]==2:
             string_lift.append('v')
 
         self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action[1]==1 or self.is_throwing2)
@@ -128,7 +130,7 @@ class EggnoggGym():
         elif stab_action[1]==0 or stab_action[1]==1:
             string_lift.append(',')
             string_press.append(',')
-        elif stab_action[1]==2:
+        if stab_action[1]==2:
             string_lift.append(',')
         
         #update previous actions

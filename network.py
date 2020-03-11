@@ -7,9 +7,9 @@ class Policy(nn.Module):
         super(Policy, self).__init__()
         #b, 8, 106
         self.relu = nn.LeakyReLU()
-        self.sigmoid = nn.Sigmoid()
-        self.softmax = nn.Softmax(dim=1)
-        self.eps = 1e-8
+        self.logsigmoid = nn.LogSigmoid()
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.eps = 1e-6
 
         #b,8,12,33
         self.conv1 = nn.Conv2d(8, 4, (3,3), padding=1)
@@ -80,14 +80,14 @@ class Policy(nn.Module):
 
         out = out.split([3,3,1,3], dim=1)
         #left, right, noop
-        out1 = self.softmax(out[0]) #b,3
+        out1 = self.logsoftmax(out[0]) #b,3
         #up, down, noop
-        out2 = self.softmax(out[1]) #b,3
+        out2 = self.logsoftmax(out[1]) #b,3
 
         #jump press & release, noop
-        out3 = self.sigmoid(out[2]) #b,1
+        out3 = self.logsigmoid(out[2]) #b,1
         #stab press, stab throw, noop
-        out4 = self.softmax(out[3]) #b,3
+        out4 = self.logsoftmax(out[3]) #b,3
 
         return (out1, out2, out3, out4)
 

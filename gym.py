@@ -37,14 +37,17 @@ class EggnoggGym():
         for key in self.gym_keys:
             pyautogui.keyUp(key)
 
-        #init noop prev_action and room
+        #init noop prev_action, room, map, throwing
         self.prev_action = [[2,2], #x_action
                             [2,2], #y_action
                             [False, False], #jump_action
-                            [False, False]] #stab_action
+                            [2,2]] #stab_action
         self.current_room = 0.5
+        self.map = self.getMap()
+        self.is_throwing1 = False
+        self.is_throwing2 = False
 
-        #grab first 8 frames
+        #grab first seq_frame frames
         self.states = self.get_single_state()[0]
         for _ in range(self.seq_len-1):
             self.states = torch.cat((self.states, # pylint: disable=no-member
@@ -59,15 +62,18 @@ class EggnoggGym():
         #       3 -> stab press
         x_action = [Categorical(action_tensors1[0]).sample(),
                     Categorical(action_tensors2[0]).sample()]
+
         y_action = [Categorical(action_tensors1[1]).sample(),
                     Categorical(action_tensors2[1]).sample()]
-        
+
         jump_action = [action_tensors1[2] > torch.rand((1,1), device=self.device), # pylint: disable=no-member
                         action_tensors2[2] > torch.rand((1,1), device=self.device)]# pylint: disable=no-member
-        stab_action = [action_tensors1[3] > torch.rand((1,1), device=self.device), # pylint: disable=no-member
-                        action_tensors2[3] > torch.rand((1,1), device=self.device)]# pylint: disable=no-member
+        
+        stab_action = [Categorical(action_tensors1[3]).sample(), # pylint: disable=no-member
+                       Categorical(action_tensors2[3]).sample()]# pylint: disable=no-member
+        
         string_press = []
-        string_lift = []
+        string_lift = ['c','n']
 
         #x action
         if x_action[0] == 0:
@@ -102,23 +108,27 @@ class EggnoggGym():
         #jump action
         if jump_action[0]:
             string_press.append('c')
-        else:
-            string_lift.append('c')
 
         if jump_action[1]:
             string_press.append('n')
-        else:
-            string_lift.append('n')
         
         #stab action
-        if stab_action[0]:
+        self.is_throwing1 = self.states[0,-1,6]==1 and (stab_action[0]==1 or self.is_throwing1)
+        if self.is_throwing1:
             string_press.append('v')
-        else:
+        elif stab_action[0]==0:
             string_lift.append('v')
-        
-        if stab_action[1]:
+            string_press.append('v')
+        elif stab_action[0]==2:
+            string_lift.append('v')
+
+        self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action[1]==1 or self.is_throwing2)
+        if self.is_throwing2:
             string_press.append(',')
-        else:
+        elif stab_action[1]==0:
+            string_lift.append(',')
+            string_press.append(',')
+        elif stab_action[1]==2:
             string_lift.append(',')
         
         #update previous actions
@@ -130,13 +140,81 @@ class EggnoggGym():
         for press in string_press:
             pyautogui.keyDown(press, _pause=False)
 
+    def getMap(self):
+        """{"v":"down_pikes",
+        "w":"water",
+        "@":"wall",
+        "*":"sword",
+        "X":"up_pikes",
+        "+":"mine",
+        "^":"win_surface",
+        "E":"lava",
+        "~":"back_fall",
+        "O":"back_sun1",
+        " ":"back_air",
+        "F":"back_column1",
+        "H":"back_column2",
+        "I":"back_column3",
+        "_":"back_chandelier_support",
+        "C":"back_chandelier1",
+        "G":"back_sun2",
+        "#":"back_crack",
+        "S":"back_eyes",
+        "P":"back_hiero",
+        "A":"back_mill",
+        "=":"back_grilling1",
+        "|":"back_column4",
+        "f":"back_column5",
+        "L":"back_perso1",
+        "N":"back_perso2",
+        "Y":"back_perso3",
+        ":":"back_column6",
+        "-":"back_line",
+        "Q":"back_skull1",
+        "t":"back_tentacle1",
+        "T":"back_tentacle2",
+        "s":"back_tentacle3",
+        "(":"back_left_sewers",
+        ")":"back_right_sewers",
+        "c":"back_chandelier2",
+        "Z":"back_bluesquare",
+        "x":"back_grilling2",
+        "q":"back_skull2",
+        "u":"back_sewers2",
+        "K":"moving_pikes",
+        ".":"back_black",
+        "Z":"back_blue",
+        "i":"back_people",
+        "`":"back_grilling3"}"""
+        map_str = EggNogg.getRoomDef()
+        map = torch.zeros((1,8,12,33), device=self.device)
+        for i,char in enumerate(map_str):
+            if char == 'v':
+                map[0,0,i//33,i%33] = 1
+            if char == 'w':
+                map[0,1,i//33,i%33] = 1
+            if char == '@':
+                map[0,2,i//33,i%33] = 1                
+            if char == '*':
+                map[0,3,i//33,i%33] = 1
+            if char == 'X':
+                map[0,4,i//33,i%33] = 1
+            if char == '+':
+                map[0,5,i//33,i%33] = 1
+            if char == '^':
+                map[0,6,i//33,i%33] = 1
+            if char == 'E':
+                map[0,7,i//33,i%33] = 1
+        return map
 
 
     def get_single_state(self):
         state_dict = EggNogg.getGameState()
-        p1_life = (state_dict['player1']['life']-50)/50 #[0,100]
-        p2_life = (state_dict['player2']['life']-50)/50
 
+        p1_life = state_dict['player1']['isAlive']*(state_dict['player1']['life']-50)/50 #[0,100]
+        p2_life = state_dict['player2']['isAlive']*(state_dict['player2']['life']-50)/50
+            
+        #TODO LAST POS IS SAME AS POS??
         p1_x = (state_dict['player1']['pos_x']-2904)/2904 #[0, 5808]
         p2_x = (state_dict['player2']['pos_x']-2904)/2904
             
@@ -158,8 +236,8 @@ class EggnoggGym():
         p1_bounce_ctr = (state_dict['player1']['bounce_ctr']-2)/2 #[0,4]
         p2_bounce_ctr = (state_dict['player2']['bounce_ctr']-2)/2
 
-        p1_situation = (state_dict['player1']['situation']-4)/4 #{0,1,8}
-        p2_situation = (state_dict['player2']['situation']-4)/4
+        p1_contact_point = (state_dict['player1']['contact_point']-4)/4 #{0,1,8}
+        p2_contact_point = (state_dict['player2']['contact_point']-4)/4
 
         p1_action = (self.action_tensor == state_dict['player1']['action']).float().reshape(1,1,13) #1,1,13
         p2_action = (self.action_tensor == state_dict['player2']['action']).float().reshape(1,1,13)
@@ -193,8 +271,8 @@ class EggnoggGym():
             p2_direction,
             p1_bounce_ctr,
             p2_bounce_ctr,
-            p1_situation,
-            p2_situation,
+            p1_contact_point,
+            p2_contact_point,
             leader,
             room_number
         ])
@@ -217,6 +295,10 @@ class EggnoggGym():
         #TODO keys_pressed how to reverse?
         #state2 = state[:,[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,18,19]]
         #state2[:,[2,3,8,9,12,13,18,19]] *= -1
+        
+        #refresh map
+        if room_number != self.current_room:
+            self.map = self.getMap()
 
         #calculate gradual reward
         if room_number == self.current_room:
@@ -242,7 +324,6 @@ class EggnoggGym():
         #check terminal
         is_terminal = (room_number == 1.0) or (room_number == -1.0)
             
-
         return state, (r1, r2), is_terminal
 
 
@@ -250,15 +331,17 @@ class EggnoggGym():
         for key in self.gym_keys:
             pyautogui.keyUp(key)
 
-        pyautogui.keyDown('f5')
-        pyautogui.keyUp('f5')
+        EggNogg.resetGame()
 
         #init noop prev_action and room
         self.prev_action = [[2,2], #x_action
                             [2,2], #y_action
                             [False, False], #jump_action
-                            [False, False]] #stab_action
+                            [2, 2]] #stab_action
         self.current_room = 0.5
+        self.is_throwing1 = False
+        self.is_throwing2 = False
+        self.map = self.getMap()
 
         #grab first seq_len frames
         self.states = self.get_single_state()[0]

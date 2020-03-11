@@ -11,8 +11,8 @@ from math import sqrt, exp, log
 import sys
 
 #params
-min_I = 1e-5
-max_steps = 2000
+min_I = 1e-45
+max_steps = 1000
 lambda_policy = 0.8
 lambda_value = 0.5
 gamma = exp(log(min_I)/max_steps)
@@ -93,21 +93,21 @@ try:
         with torch.enable_grad():
             while not is_terminal:
                 steps += 1
-                actions1 = P1(stateP1)
-                actions2 = P2(stateP2)
+                actions1 = P1(stateP1, gym.map)
+                actions2 = P2(stateP2, gym.map)
                 state_new, reward, is_terminal = gym.step(actions1, actions2)
                 state_new = state_new.to(gpu)
                 if steps%max_steps == 0:
                     is_terminal = True
 
-                v1_old = V1(stateV1)#.detach())
-                v2_old = V2(stateV2)#.detach())
+                v1_old = V1(stateV1, gym.map)#.detach())
+                v2_old = V2(stateV2, gym.map)#.detach())
                 with torch.autograd.no_grad():
                     #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
                     if not is_terminal:
-                        v1_new = V1(state_new)
+                        v1_new = V1(state_new, gym.map)
                         delta1 = reward[0] + gamma*v1_new - v1_old.detach()
-                        v2_new = V2(state_new)
+                        v2_new = V2(state_new, gym.map)
                         delta2 = reward[1] + gamma*v2_new - v2_old.detach()
                     else:
                         delta1 = reward[0] - v1_old

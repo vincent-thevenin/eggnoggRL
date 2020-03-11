@@ -75,18 +75,19 @@ class Policy(nn.Module):
         out = self.lin5(out)
         out = self.relu(out)
         out = self.lin6(out)
+        out = self.relu(out)
         #b, 10
 
         out = out.split([3,3,1,3], dim=1)
         #left, right, noop
-        out1 = self.softmax(out[0]+self.eps) #b,3
+        out1 = self.softmax(out[0]) #b,3
         #up, down, noop
-        out2 = self.softmax(out[1]+self.eps) #b,3
+        out2 = self.softmax(out[1]) #b,3
 
         #jump press & release, noop
         out3 = self.sigmoid(out[2]) #b,1
         #stab press, stab throw, noop
-        out4 = self.softmax(out[3]+self.eps) #b,3
+        out4 = self.softmax(out[3]) #b,3
 
         return (out1, out2, out3, out4)
 

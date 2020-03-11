@@ -78,31 +78,31 @@ class EggnoggGym():
         #x action
         if x_action[0] == 0:
             string_press.append('q')
-        elif x_action[0] == 1:
+        if x_action[0] == 1:
             string_press.append('d')
-        elif x_action[0] == 2 or x_action[0] != self.prev_action[0][0]:
+        if x_action[0] == 2 or x_action[0] != self.prev_action[0][0]:
             string_lift.extend(['q','d'])
 
         if x_action[1] == 0:
             string_press.append('k')
-        elif x_action[1] == 1:
+        if x_action[1] == 1:
             string_press.append('m')
-        elif x_action[1] == 2 or x_action[1] != self.prev_action[0][1]:
+        if x_action[1] == 2 or x_action[1] != self.prev_action[0][1]:
             string_lift.extend(['k','m'])
 
         #y action
         if y_action[0] == 0:
             string_press.append('z')
-        elif y_action[0] == 1:
+        if y_action[0] == 1:
             string_press.append('s')
-        elif y_action[0] == 2 or y_action[0] != self.prev_action[1][0]:
+        if y_action[0] == 2 or y_action[0] != self.prev_action[1][0]:
             string_lift.extend(['z','s'])
 
         if y_action[1] == 0:
             string_press.append('o')
-        elif y_action[1] == 1:
+        if y_action[1] == 1:
             string_press.append('l')
-        elif y_action[1] == 2 or y_action[1] != self.prev_action[1][1]:
+        if y_action[1] == 2 or y_action[1] != self.prev_action[1][1]:
             string_lift.extend(['o','l'])
         
         #jump action
@@ -116,7 +116,7 @@ class EggnoggGym():
         self.is_throwing1 = self.states[0,-1,6]==1 and (stab_action[0]==1 or self.is_throwing1)
         if self.is_throwing1:
             string_press.append('v')
-        elif stab_action[0]==0:
+        elif stab_action[0]==0 or stab_action[0]==1:
             string_lift.append('v')
             string_press.append('v')
         elif stab_action[0]==2:
@@ -125,7 +125,7 @@ class EggnoggGym():
         self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action[1]==1 or self.is_throwing2)
         if self.is_throwing2:
             string_press.append(',')
-        elif stab_action[1]==0:
+        elif stab_action[1]==0 or stab_action[1]==1:
             string_lift.append(',')
             string_press.append(',')
         elif stab_action[1]==2:

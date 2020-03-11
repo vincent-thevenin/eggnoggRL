@@ -150,15 +150,15 @@ try:
                         delta1 = reward[0] - v1_old
                         delta2 = reward[1] - v2_old
 
-                (v1_old).backward()
+                v1_old.backward()
                 for i,p in enumerate(V1.parameters()):
                     z_value1[i] = gamma*lambda_value*z_value1[i] + p.grad
-                    p.grad = -delta1*z_value1[i] #gradiet ascent
+                    p.grad = -delta1*z_value1[i] #gradient ascent
 
-                (v2_old).backward()
+                v2_old.backward()
                 for i,p in enumerate(V2.parameters()):
                     z_value2[i] = gamma*lambda_value*z_value2[i] + p.grad
-                    p.grad = -delta2*z_value2[i] #gradiet ascent
+                    p.grad = -delta2*z_value2[i] #gradient ascent
 
                 optimizerV.step()
 
@@ -192,14 +192,14 @@ try:
 
                 p1_reward_sum += I*reward[0]
                 p2_reward_sum += I*reward[1]
-                if not steps%1:
-                    """out = ""
+                if not steps%10:
+                    out = ""
                     for a in actions1:
                         out += (repr(a) + "\n")
-                        #print(a)
+                        print(a)
                     for a in actions2:
                         out += (repr(a) + "\n")
-                        #print(a)
+                        print(a)
                     out += (f"{delta1.item()=:.6f}\n"
                         f"{delta2.item()=:.6f}\n"
                         f"{v1_old.item()=:.6f}\n"
@@ -210,7 +210,7 @@ try:
                         f"{p1_reward_sum=:.6f}\n"
                         f"{p2_reward_sum=:.6f}\n"
                     )
-                    display_text(out)"""
+                    display_text(out)
                    #print(
                         #f"{delta1.item()=:.6f}\n"
                         #f"{delta2.item()=:.6f}\n"
@@ -220,13 +220,13 @@ try:
                         #f"{v2_new.item()=:.6f}\n"
                         #f"{steps=}"
                     #)
-                    print('delta1', delta1.item(), '\n',
+                    """print('delta1', delta1.item(), '\n',
                         'delta2:',delta2.item(), '\n',
                         'v1_old:',v1_old.item(), '\n',
                         'v2_old:',v2_old.item(), '\n',
                         'v1_new:',v1_new.item(), '\n',
                         'v2_new:',v2_new.item(), '\n',
-                        'steps:',steps)
+                        'steps:',steps)"""
                     """if reward[0] > reward[1]:
                         print('G')
                     elif reward[0] == reward[1]:
@@ -237,7 +237,7 @@ try:
                     p2_reward_sum += I*rewar[1]
                     print('p1_reward_sum:', p1_reward_sum)"""
                     #print('undiscounted_reward:', reward[1])
-                    print()
+                    #print()
         stop = datetime.now()
         print('avg time/step:',(stop-start)/steps)
         episode += 1

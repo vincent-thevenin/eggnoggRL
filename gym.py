@@ -78,14 +78,14 @@ class EggnoggGym():
         #x action
         if x_action[0] == 0:
             string_press.append('q')
-        if x_action[0] == 1:
+        elif x_action[0] == 1:
             string_press.append('d')
         if x_action[0] == 2 or x_action[0] != self.prev_action[0][0]:
             string_lift.extend(['q','d'])
 
         if x_action[1] == 0:
             string_press.append('k')
-        if x_action[1] == 1:
+        elif x_action[1] == 1:
             string_press.append('m')
         if x_action[1] == 2 or x_action[1] != self.prev_action[0][1]:
             string_lift.extend(['k','m'])
@@ -93,14 +93,14 @@ class EggnoggGym():
         #y action
         if y_action[0] == 0:
             string_press.append('z')
-        if y_action[0] == 1:
+        elif y_action[0] == 1:
             string_press.append('s')
         if y_action[0] == 2 or y_action[0] != self.prev_action[1][0]:
             string_lift.extend(['z','s'])
 
         if y_action[1] == 0:
             string_press.append('o')
-        if y_action[1] == 1:
+        elif y_action[1] == 1:
             string_press.append('l')
         if y_action[1] == 2 or y_action[1] != self.prev_action[1][1]:
             string_lift.extend(['o','l'])

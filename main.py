@@ -9,12 +9,49 @@ from time import sleep
 from loss import PerfPolicy, PerfValue
 from math import sqrt, exp, log
 import sys
+import pygame
+
+
+
+pygame.init()
+
+
+SIZE = WIDTH, HEIGHT = (570, 600)
+screen = pygame.display.set_mode(SIZE, pygame.RESIZABLE)
+
+def blit_text(surface, text, pos, font, color=pygame.Color('white')):
+	words = [word.split(' ') for word in text.splitlines()]  # 2D array where each row is a list of words.
+	space = font.size(' ')[0]  # The width of a space.
+	max_width, max_height = surface.get_size()
+	x, y = pos
+	for line in words:
+		for word in line:
+			word_surface = font.render(word, 0, color)
+			word_width, word_height = word_surface.get_size()
+			if x + word_width >= max_width:
+				x = pos[0]  # Reset the x.
+				y += word_height  # Start on new row.
+			surface.blit(word_surface, (x, y))
+			x += word_width + space
+		x = pos[0]  # Reset the x.
+		y += word_height  # Start on new row.
+
+font = pygame.font.SysFont('Arial', 20)
+
+def display_text(text):
+    screen.fill(pygame.Color('black'))
+    blit_text(screen, text, (20, 20), font)
+    pygame.display.update()
+
+
+
+
 
 #params
-min_I = 1e-45
+min_I = 1e-3
 max_steps = 1000
 lambda_policy = 0.8
-lambda_value = 0.5
+lambda_value = 0.8
 gamma = exp(log(min_I)/max_steps)
 print(gamma)
 path_to_chkpt = 'weights.tar'
@@ -57,7 +94,7 @@ V2.to(gpu)
 optimizerP = optim.SGD(params= list(P1.parameters())+list(P2.parameters()),
                         lr=2**-7)
 optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
-                        lr=2**-9)
+                        lr=2**-5)
 
 
 #############################################################################
@@ -65,7 +102,7 @@ optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
 ##############################################################################
 
 #init gym
-gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=120, seq_len=32)
+gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=300, seq_len=32)
 try:
     while True:
         #INITS
@@ -149,35 +186,55 @@ try:
                 stateP1.detach_().requires_grad_()
                 stateP2.detach_().requires_grad_()
 
-                if not steps%10:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        quit()
+
+                p1_reward_sum += I*reward[0]
+                p2_reward_sum += I*reward[1]
+                if not steps%1:
+                    """out = ""
                     for a in actions1:
-                        print(a)
+                        out += (repr(a) + "\n")
+                        #print(a)
                     for a in actions2:
-                        print(a)
-                    print(
-                        f"{delta1.item()=:.6f}\n"
+                        out += (repr(a) + "\n")
+                        #print(a)
+                    out += (f"{delta1.item()=:.6f}\n"
                         f"{delta2.item()=:.6f}\n"
                         f"{v1_old.item()=:.6f}\n"
                         f"{v2_old.item()=:.6f}\n"
                         f"{v1_new.item()=:.6f}\n"
                         f"{v2_new.item()=:.6f}\n"
-                        f"{steps=}"
+                        f"{steps=}\n"
+                        f"{p1_reward_sum=:.6f}\n"
+                        f"{p2_reward_sum=:.6f}\n"
                     )
-                    """print('delta1', delta1.item(), '\n',
+                    display_text(out)"""
+                   #print(
+                        #f"{delta1.item()=:.6f}\n"
+                        #f"{delta2.item()=:.6f}\n"
+                        #f"{v1_old.item()=:.6f}\n"
+                        #f"{v2_old.item()=:.6f}\n"
+                        #f"{v1_new.item()=:.6f}\n"
+                        #f"{v2_new.item()=:.6f}\n"
+                        #f"{steps=}"
+                    #)
+                    print('delta1', delta1.item(), '\n',
                         'delta2:',delta2.item(), '\n',
                         'v1_old:',v1_old.item(), '\n',
                         'v2_old:',v2_old.item(), '\n',
                         'v1_new:',v1_new.item(), '\n',
                         'v2_new:',v2_new.item(), '\n',
-                        'steps:',steps)"""
+                        'steps:',steps)
                     """if reward[0] > reward[1]:
                         print('G')
                     elif reward[0] == reward[1]:
                         print('E')
                     else:
-                        print('R')"""
+                        print('R')""",
                     """p1_reward_sum += I*reward[0]
-                    p2_reward_sum 
+                    p2_reward_sum += I*rewar[1]
                     print('p1_reward_sum:', p1_reward_sum)"""
                     #print('undiscounted_reward:', reward[1])
                     print()

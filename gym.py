@@ -211,15 +211,15 @@ class EggnoggGym():
     def get_single_state(self):
         state_dict = EggNogg.getGameState()
 
-        p1_life = state_dict['player1']['isAlive']*(state_dict['player1']['life']-50)/50 #[0,100]
-        p2_life = state_dict['player2']['isAlive']*(state_dict['player2']['life']-50)/50
+        p1_life = (state_dict['player1']['life']-50)/50 #[0,100]
+        p2_life = (state_dict['player2']['life']-50)/50
             
         #TODO LAST POS IS SAME AS POS??
-        p1_x = (state_dict['player1']['pos_x']-2904)/2904 #[0, 5808]
-        p2_x = (state_dict['player2']['pos_x']-2904)/2904
+        p1_x = (state_dict['player1']['last_pos_x']-2904)/2904 #[0, 5808]
+        p2_x = (state_dict['player2']['last_pos_x']-2904)/2904
             
-        p1_y = (state_dict['player1']['pos_y']-89)/89 #[0,178]
-        p2_y = (state_dict['player2']['pos_y']-89)/89
+        p1_y = (state_dict['player1']['last_pos_y']-89)/89 #[0,178]
+        p2_y = (state_dict['player2']['last_pos_y']-89)/89
 
         p1_has_sword = (state_dict['player1']['hasSword']-0.5)/0.5 #bool
         p2_has_sword = (state_dict['player2']['hasSword']-0.5)/0.5
@@ -245,7 +245,7 @@ class EggnoggGym():
         p1_keys_pressed = ((self.keys_tensor & state_dict['player1']['keys_pressed']) != 0).float().reshape(1,1,6) #1,1,6
         p2_keys_pressed = ((self.keys_tensor & state_dict['player2']['keys_pressed']) != 0).float().reshape(1,1,6)
 
-        leader = (state_dict['leader']-1)/1
+        leader = (state_dict['leader']-1)/1 #-1 neutral, 0 player1, 1 player2
         room_number = (state_dict['room_number']-5)/5
         #nb_swords = (state_dict['nb_swords'])
         swords = torch.zeros((1,1,16*3))
@@ -300,15 +300,40 @@ class EggnoggGym():
         if room_number != self.current_room:
             self.map = self.getMap()
 
-        #calculate gradual reward
-        if room_number == self.current_room:
-            r1 = r2 = 0
-        elif room_number > self.current_room:
-            r1 = 1
-            r2 = -1
-        else:
-            r1 = -1
-            r2 = 1
+        r1 = r2 = 0
+        #calculate reward for changing room
+        if room_number > self.current_room:
+            r1 += 2*(room_number+1)
+            r2 += -2*(room_number+1)
+        elif room_number < self.current_room:
+            r1 += 2*(room_number-1)
+            r2 += -2*(room_number-1)
+
+        #calculate reward for pushing when leading
+        if leader == 0: #player 1 lead
+            bonus = (p1_x)/5
+            r1 += bonus
+            r2 -= bonus
+        elif leader == 1: #player 2 lead
+            bonus = (p2_x)/5
+            r1 -= -bonus
+            r2 += -bonus
+
+        #calculate reward for surviving, dying and killing
+        if leader == 0: #player 1 lead
+            bonus = (p1_life)/10
+            r1 += bonus
+            r2 -= bonus
+        elif leader == 1: #player 2 lead
+            bonus = (p2_life)/10
+            r1 -= bonus
+            r2 += bonus           
+
+            
+        #calculate reward for being high
+        r1 += -(p1_y)/200
+        r2 += -(p2_y)/200
+
         self.current_room = room_number
         """#calculate one reward
         if room_number == 1.0:

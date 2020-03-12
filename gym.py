@@ -55,6 +55,8 @@ class EggnoggGym():
             self.states = torch.cat((self.states, # pylint: disable=no-member
                                         self.get_single_state()[0]),
                                     dim=1)
+        self.prev_p1_x = self.states[0,-1,2]
+        self.prev_p2_x = self.states[0,-1,3]
 
     def act(self, action_tensors1, action_tensors2):
         #Transforms action_tensor to string for xdo
@@ -305,36 +307,36 @@ class EggnoggGym():
         r1 = r2 = 0
         #calculate reward for changing room
         if room_number > self.current_room:
-            r1 += 1
-            r2 += -1
+            r1 += 10
+            r2 += -10
         elif room_number < self.current_room:
-            r1 += 1
-            r2 += -1
+            r1 += 10
+            r2 += -10
 
-        """#calculate reward for pushing when leading
+        #calculate reward for pushing when leading
         if leader == 0: #player 1 lead
-            bonus = p1_x+1
+            bonus = p1_x - self.prev_p1_x
             r1 += bonus
             r2 -= bonus
         elif leader == 1: #player 2 lead
-            bonus = -p2_x+1
+            bonus = self.prev_p2_x - p2_x
             r1 -= bonus
-            r2 += bonus"""
+            r2 += bonus
 
-        """#calculate reward for surviving, dying and killing
-        if leader == 0: #player 1 lead
-            bonus = (p1_life)/10
-            r1 += bonus
-            r2 -= bonus
-        elif leader == 1: #player 2 lead
-            bonus = (p2_life)/10
-            r1 -= bonus
-            r2 += bonus           
+        # #calculate reward for surviving, dying and killing
+        # if leader == 0: #player 1 lead
+        #     bonus = (p1_life)/10
+        #     r1 += bonus
+        #     r2 -= bonus
+        # elif leader == 1: #player 2 lead
+        #     bonus = (p2_life)/10
+        #     r1 -= bonus
+        #     r2 += bonus           
 
             
-        #calculate reward for being high
-        r1 += -(p1_y)/200
-        r2 += -(p2_y)/200"""
+        # #calculate reward for being high
+        # r1 += -(p1_y)/200
+        # r2 += -(p2_y)/200
 
         """#calculate one reward
         if room_number == 1.0:
@@ -350,6 +352,8 @@ class EggnoggGym():
         #check terminal
         is_terminal = (room_number == 1.0) or (room_number == -1.0)
         self.current_room = room_number
+        self.prev_p1_x = p1_x
+        self.prev_p2_x = p2_x
             
         return state, (r1, r2), is_terminal
 

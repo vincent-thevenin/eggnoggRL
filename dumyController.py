@@ -14,7 +14,7 @@ LISTA = ['z','q','s','d','c','v']#the controls for a
 LISTB = ['o','k','l','m','n',',']#the controls for b
 #! order of controlls must be preserved !!!
 #* order is : up,left,down,right,jump,punch
-COLORA = (255,0,0) #color of controller a
+COLORA = (0,100,255) #color of controller a
 COLORB = (0,255,0) #color of controller b
 THELIST = [
     [LISTA,SCREENA,COLORA],

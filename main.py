@@ -13,7 +13,7 @@ import pygame
 
 
 
-"""pygame.init()
+pygame.init()
 
 SIZE = WIDTH, HEIGHT = (570, 600)
 screen = pygame.display.set_mode(SIZE, pygame.RESIZABLE)
@@ -40,7 +40,7 @@ font = pygame.font.SysFont('Arial', 20)
 def display_text(text):
     screen.fill(pygame.Color('black'))
     blit_text(screen, text, (20, 20), font)
-    pygame.display.update()"""
+    pygame.display.update()
 
 
 
@@ -49,8 +49,8 @@ def display_text(text):
 #params
 min_I = 1e-25
 max_steps = 2000
-lambda_policy = 0.9
-lambda_value = 0.9
+lambda_policy = 0.5
+lambda_value = 0.5
 gamma = exp(log(min_I)/max_steps)
 print(gamma)
 path_to_chkpt = 'weights.tar'
@@ -101,14 +101,14 @@ optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
 ##############################################################################
 
 #init gym
-gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=90, seq_len=32)
+gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=142, seq_len=32)
 try:
     while True:
         #INITS
         start = datetime.now()
         is_terminal = False
         
-        steps = p1_reward_sum = p2_reward_sum = 0
+        steps = 0
         I = 1
         state = gym.states
         stateP1, stateP2, stateV1, stateV2 = (
@@ -185,20 +185,20 @@ try:
                 stateP1.detach_().requires_grad_()
                 stateP2.detach_().requires_grad_()
 
-                """for event in pygame.event.get():
+                for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        quit()"""
+                        quit()
 
-                """p1_reward_sum += I*reward[0]
-                p2_reward_sum += I*reward[1]
+                p1_reward = reward[0]
+                p2_reward = reward[1]
                 if not steps%1:
                     out = ""
                     for a in actions1:
-                        #out += (repr(a) + "\n")
-                        print(a)
+                        out += (repr(a) + "\n")
+                        #print(a)
                     for a in actions2:
-                        #out += (repr(a) + "\n")
-                        print(a)
+                        out += (repr(a) + "\n")
+                        #print(a)
                     out += (f"{delta1.item()=:.6f}\n"
                         f"{delta2.item()=:.6f}\n"
                         f"{v1_old.item()=:.6f}\n"
@@ -206,11 +206,11 @@ try:
                         f"{v1_new.item()=:.6f}\n"
                         f"{v2_new.item()=:.6f}\n"
                         f"{steps=}\n"
-                        f"{p1_reward_sum=:.6f}\n"
-                        f"{p2_reward_sum=:.6f}\n"
+                        f"{p1_reward=:.6f}\n"
+                        f"{p2_reward=:.6f}\n"
                     )
                     display_text(out)
-                    print(
+                    """print(
                         f"{delta1.item()=:.6f}\n"
                         f"{delta2.item()=:.6f}\n"
                         f"{v1_old.item()=:.6f}\n"

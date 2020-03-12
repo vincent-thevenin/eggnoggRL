@@ -13,8 +13,7 @@ import pygame
 
 
 
-pygame.init()
-
+"""pygame.init()
 
 SIZE = WIDTH, HEIGHT = (570, 600)
 screen = pygame.display.set_mode(SIZE, pygame.RESIZABLE)
@@ -41,17 +40,17 @@ font = pygame.font.SysFont('Arial', 20)
 def display_text(text):
     screen.fill(pygame.Color('black'))
     blit_text(screen, text, (20, 20), font)
-    pygame.display.update()
+    pygame.display.update()"""
 
 
 
 
 
 #params
-min_I = 1e-3
-max_steps = 1000
-lambda_policy = 0.8
-lambda_value = 0.8
+min_I = 1e-25
+max_steps = 2000
+lambda_policy = 0.9
+lambda_value = 0.9
 gamma = exp(log(min_I)/max_steps)
 print(gamma)
 path_to_chkpt = 'weights.tar'
@@ -92,9 +91,9 @@ V2.to(gpu)
 
 #optimizer
 optimizerP = optim.SGD(params= list(P1.parameters())+list(P2.parameters()),
-                        lr=2**-7)
+                        lr=1e-2)
 optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
-                        lr=2**-5)
+                        lr=1e-3)
 
 
 #############################################################################
@@ -102,7 +101,7 @@ optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
 ##############################################################################
 
 #init gym
-gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=300, seq_len=32)
+gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=90, seq_len=32)
 try:
     while True:
         #INITS
@@ -186,19 +185,19 @@ try:
                 stateP1.detach_().requires_grad_()
                 stateP2.detach_().requires_grad_()
 
-                for event in pygame.event.get():
+                """for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        quit()
+                        quit()"""
 
-                p1_reward_sum += I*reward[0]
+                """p1_reward_sum += I*reward[0]
                 p2_reward_sum += I*reward[1]
-                if not steps%10:
+                if not steps%1:
                     out = ""
                     for a in actions1:
-                        out += (repr(a) + "\n")
+                        #out += (repr(a) + "\n")
                         print(a)
                     for a in actions2:
-                        out += (repr(a) + "\n")
+                        #out += (repr(a) + "\n")
                         print(a)
                     out += (f"{delta1.item()=:.6f}\n"
                         f"{delta2.item()=:.6f}\n"
@@ -211,33 +210,33 @@ try:
                         f"{p2_reward_sum=:.6f}\n"
                     )
                     display_text(out)
-                   #print(
-                        #f"{delta1.item()=:.6f}\n"
-                        #f"{delta2.item()=:.6f}\n"
-                        #f"{v1_old.item()=:.6f}\n"
-                        #f"{v2_old.item()=:.6f}\n"
-                        #f"{v1_new.item()=:.6f}\n"
-                        #f"{v2_new.item()=:.6f}\n"
-                        #f"{steps=}"
-                    #)
-                    """print('delta1', delta1.item(), '\n',
+                    print(
+                        f"{delta1.item()=:.6f}\n"
+                        f"{delta2.item()=:.6f}\n"
+                        f"{v1_old.item()=:.6f}\n"
+                        f"{v2_old.item()=:.6f}\n"
+                        f"{v1_new.item()=:.6f}\n"
+                        f"{v2_new.item()=:.6f}\n"
+                        f"{steps=}"
+                    )
+                    print('delta1', delta1.item(), '\n',
                         'delta2:',delta2.item(), '\n',
                         'v1_old:',v1_old.item(), '\n',
                         'v2_old:',v2_old.item(), '\n',
                         'v1_new:',v1_new.item(), '\n',
                         'v2_new:',v2_new.item(), '\n',
-                        'steps:',steps)"""
-                    """if reward[0] > reward[1]:
+                        'steps:',steps)
+                    if reward[0] > reward[1]:
                         print('G')
                     elif reward[0] == reward[1]:
                         print('E')
                     else:
-                        print('R')""",
-                    """p1_reward_sum += I*reward[0]
-                    p2_reward_sum += I*rewar[1]
-                    print('p1_reward_sum:', p1_reward_sum)"""
+                        print('R')
+                    p1_reward_sum += I*reward[0]
+                    p2_reward_sum += I*reward[1]
+                    print('p1_reward_sum:', reward)
                     #print('undiscounted_reward:', reward[1])
-                    #print()
+                    #print()"""
         stop = datetime.now()
         print('avg time/step:',(stop-start)/steps)
         episode += 1

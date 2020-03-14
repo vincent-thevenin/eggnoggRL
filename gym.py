@@ -310,21 +310,21 @@ class EggnoggGym():
         r1 = r2 = 0
         #calculate reward for changing room
         if room_number > self.current_room:
-            r1 += 10
-            r2 += -10
+            r1 += 100
+            r2 += -100
         elif room_number < self.current_room:
-            r1 += 10
-            r2 += -10
+            r1 += 100
+            r2 += -100
 
         #calculate reward for pushing when leading
         if leader == 0: #player 1 lead
             bonus = p1_x - self.prev_p1_x
-            r1 += bonus
-            r2 -= bonus
+            r1 += bonus*10
+            #r2 -= bonus
         elif leader == 1: #player 2 lead
             bonus = self.prev_p2_x - p2_x
-            r1 -= bonus
-            r2 += bonus
+            #r1 -= bonus
+            r2 += bonus*10
 
         # #calculate reward for surviving, dying and killing
         # if leader == 0: #player 1 lead

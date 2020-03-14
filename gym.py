@@ -254,9 +254,12 @@ class EggnoggGym():
         #nb_swords = (state_dict['nb_swords'])
         swords = torch.zeros((1,1,16*3), device=self.device)
         for i, swordkey in enumerate(list(state_dict['swords'].keys())):
-            swords[0,0,i*3+0] = (state_dict['swords'][swordkey]['pos_x']-2904)/2904
-            swords[0,0,i*3+1] = (state_dict['swords'][swordkey]['pos_y']-89)/89
-            swords[0,0,i*3+2] = 1.0
+            try:
+                swords[0,0,i*3+0] = (state_dict['swords'][swordkey]['pos_x']-2904)/2904
+                swords[0,0,i*3+1] = (state_dict['swords'][swordkey]['pos_y']-89)/89
+                swords[0,0,i*3+2] = 1.0
+            except:
+                print('error:', len(list(state_dict['swords'].keys())))
         
         state = torch.tensor([
             p1_life,

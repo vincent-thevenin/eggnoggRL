@@ -168,7 +168,7 @@ try:
                     z_policy1[i] = gamma*lambda_policy*z_policy1[i] + p.grad
                     p.grad = -delta1*z_policy1[i]
 
-                perf_p2 = Perf_p(I, actions2, gym.prev_action, 0)
+                perf_p2 = Perf_p(I, actions2, gym.prev_action, 1)
                 perf_p2.backward()
                 for i,p in enumerate(P2.parameters()):
                     z_policy2[i] = gamma*lambda_policy*z_policy2[i] + p.grad

@@ -148,7 +148,8 @@ try:
                     else:
                         delta1 = reward[0] - v1_old
                         delta2 = reward[1] - v2_old
-
+                    delta1 = max(min(delta1, 1.0), -1.0)
+                    delta2 = max(min(delta2, 1.0), -1.0)
                 v1_old.backward()
                 for i,p in enumerate(V1.parameters()):
                     z_value1[i] = gamma*lambda_value*z_value1[i] + p.grad

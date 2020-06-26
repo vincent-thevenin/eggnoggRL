@@ -47,7 +47,7 @@ def display_text(text):
 
 
 #params
-min_I = 1e-25
+min_I = 1e-3
 max_steps = 2000
 lambda_policy = 0.5
 lambda_value = 0.5
@@ -91,9 +91,9 @@ V2.to(gpu)
 
 #optimizer
 optimizerP = optim.SGD(params= list(P1.parameters())+list(P2.parameters()),
-                        lr=1e-1)
-optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
                         lr=1e-3)
+optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
+                        lr=1e-4)
 
 
 #############################################################################

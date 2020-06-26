@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet18
-
+    
 class Policy(nn.Module):
     def __init__(self):
         super(Policy, self).__init__()
@@ -89,7 +89,7 @@ class Policy(nn.Module):
         #stab press, stab throw, noop
         out4 = self.logsoftmax(out[3]) #b,3
 
-        return (out1, out2, out3, out4)
+        return (out1, out2, out3, out4) #4, b, 3
 
 class Value(nn.Module):
     def __init__(self):
@@ -110,7 +110,7 @@ class Value(nn.Module):
 
         self.lstm = nn.LSTM(
             input_size=106,
-            hidden_size=504, 
+            hidden_size=494, 
             batch_first=True, 
             bidirectional=False)
 
@@ -127,7 +127,7 @@ class Value(nn.Module):
         self.lin6 = nn.Linear(64,1)
         #b,1
 
-    def forward(self, state, map):
+    def forward(self, state, map, actions):
         #b, 8, 12, 33
         out_map = self.conv1(map)
         out_map = self.pool1(out_map)
@@ -143,11 +143,14 @@ class Value(nn.Module):
 
         #b,8,2
         _, (out, _) = self.lstm(state)
-        #b,1,506
+        #b,1,494
 
         out = out.squeeze(1)
-        #b,506
+        #b,494
         out = torch.cat((out, out_map), dim=1)
+        #b,502
+        for action in actions:
+            out = torch.cat((out, action), dim=1)
         #b,512
 
         out = self.lin1(out)

@@ -9,6 +9,7 @@ from xdo import Xdo
 from time import sleep
 import torch
 from torch.distributions.categorical import Categorical
+from torch.distributions.uniform import Uniform
 import pyautogui
 import pyeggnogg as EggNogg
 
@@ -29,6 +30,7 @@ class EggnoggGym():
         self.device = device
         self.seq_len = seq_len
         self.gym_keys = ['z','q','s','d','c','v','o','k','l','m','n',',']
+        self.U = Uniform(0,1)
 
         #launch game
         EggNogg.init(lib_path, executable_path)
@@ -58,81 +60,111 @@ class EggnoggGym():
         self.prev_p1_x = self.states[0,-1,2]
         self.prev_p2_x = self.states[0,-1,3]
 
+
+    def g(self, epsilon, pks): # (y - sum_k=1_N so that the difference is positive(pk)) / pN+1 + N
+        """inputs:
+        epsilon: sample from uniform distriution
+        pks: probabilities for the categoical sampling (shape: (N))"""
+        cum_pk = 0
+        for i, pk in enumerate(pks):
+            cum_pk += pk
+            if epsilon-cum_pk <= 0:
+                break
+        return (epsilon-(cum_pk-pk))/pk + i #i+1 - 1
+
+
     def act(self, action_tensors1, action_tensors2):
-        #Transforms action_tensor to string for xdo
-        #coord: 0 -> left, right, noop (right,left,noop for player2)
-        #       1 -> up, down, noop
-        #       2 -> jump press
-        #       3 -> stab press
-        x_action = [Categorical(torch.exp(action_tensors1[0])).sample(),
-                    Categorical(torch.exp(action_tensors2[0])).sample()]
-
-        y_action = [Categorical(torch.exp(action_tensors1[1])).sample(),
-                    Categorical(torch.exp(action_tensors2[1])).sample()]
-
-        jump_action = [torch.exp(action_tensors1[2]) > torch.rand((1,1), device=self.device), # pylint: disable=no-member
-                        torch.exp(action_tensors2[2]) > torch.rand((1,1), device=self.device)]# pylint: disable=no-member
+        """
+        Transforms action_tensor to string for xdo
+        coord: 0 -> left, right, noop (right,left,noop for player2)
+               1 -> up, down, noop
+               2 -> jump press
+               3 -> stab press
+        """
         
-        stab_action = [Categorical(torch.exp(action_tensors1[3])).sample(), # pylint: disable=no-member
-                       Categorical(torch.exp(action_tensors2[3])).sample()]# pylint: disable=no-member
+        x_action = [
+            self.g(self.U.sample(), torch.exp(action_tensors1[0]).squeeze()),
+            self.g(self.U.sample(), torch.exp(action_tensors2[0]).squeeze())
+        ]
+
+        y_action = [
+            self.g(self.U.sample(), torch.exp(action_tensors1[1]).squeeze()),
+            self.g(self.U.sample(), torch.exp(action_tensors2[1]).squeeze())
+        ]
+
+        jump_action = [
+            self.g(self.U.sample(), [1-torch.exp(action_tensors1[2]).squeeze(), torch.exp(action_tensors1[2].squeeze())]),
+            self.g(self.U.sample(), [1-torch.exp(action_tensors2[2]).squeeze(), torch.exp(action_tensors2[2].squeeze())])
+        ]
+
+        stab_action = [
+            self.g(self.U.sample(), torch.exp(action_tensors1[3]).squeeze()),
+            self.g(self.U.sample(), torch.exp(action_tensors2[3]).squeeze())
+        ]
         
         string_press = []
         string_lift = ['c','n']
 
         #x action
-        if x_action[0] == 0:
+        x_action_0 = int(x_action[0])
+        if x_action_0 == 0:
             string_press.append('q')
-        elif x_action[0] == 1:
+        elif x_action_0 == 1:
             string_press.append('d')
-        if x_action[0] == 2 or x_action[0] != self.prev_action[0][0]:
+        if x_action_0 == 2 or x_action_0 != int(self.prev_action[0][0]):
             string_lift.extend(['q','d'])
 
-        if x_action[1] == 0:
+        x_action_1 = int(x_action[1])
+        if x_action_1 == 0:
             string_press.append('k')
-        elif x_action[1] == 1:
+        elif x_action_1 == 1:
             string_press.append('m')
-        if x_action[1] == 2 or x_action[1] != self.prev_action[0][1]:
+        if x_action_1 == 2 or x_action_1 != int(self.prev_action[0][1]):
             string_lift.extend(['k','m'])
 
         #y action
-        if y_action[0] == 0:
+        y_action_0 = int(y_action[0])
+        if y_action_0 == 0:
             string_press.append('z')
-        elif y_action[0] == 1:
+        elif y_action_0 == 1:
             string_press.append('s')
-        if y_action[0] == 2 or y_action[0] != self.prev_action[1][0]:
+        if y_action_0 == 2 or y_action_0 != int(self.prev_action[1][0]):
             string_lift.extend(['z','s'])
 
-        if y_action[1] == 0:
+        y_action_1 = int(y_action[1])
+        if y_action_1 == 0:
             string_press.append('o')
-        elif y_action[1] == 1:
+        elif y_action_1 == 1:
             string_press.append('l')
-        if y_action[1] == 2 or y_action[1] != self.prev_action[1][1]:
+        if y_action_1 == 2 or y_action_1 != int(self.prev_action[1][1]):
             string_lift.extend(['o','l'])
         
         #jump action
-        if jump_action[0]:
+        if int(jump_action[0]):
             string_press.append('c')
 
-        if jump_action[1]:
+        if int(jump_action[1]):
             string_press.append('n')
         
         #stab action
-        self.is_throwing1 = self.states[0,-1,6]==1 and (stab_action[0]==1 or self.is_throwing1)
+        stab_action_0 = int(stab_action[0])
+        self.is_throwing1 = self.states[0,-1,6]==1 and (stab_action_0==1 or self.is_throwing1) #has sword and wants to throw or has sword and is already throwing
         if self.is_throwing1:
             string_press.append('v')
-        elif stab_action[0]==0 or stab_action[0]==1:
+        elif stab_action_0==0 or stab_action_0==1:
             string_lift.append('v')
             string_press.append('v')
-        if stab_action[0]==2:
+        if stab_action_0==2:
             string_lift.append('v')
 
-        self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action[1]==1 or self.is_throwing2)
+        stab_action_1 = int(stab_action[1])
+        self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action_1==1 or self.is_throwing2) #has sword and wants to throw or has sword and is already throwing
         if self.is_throwing2:
             string_press.append(',')
-        elif stab_action[1]==0 or stab_action[1]==1:
+        elif stab_action_1==0 or stab_action_1==1:
             string_lift.append(',')
             string_press.append(',')
-        if stab_action[1]==2:
+        if stab_action_1==2:
             string_lift.append(',')
         
         #update previous actions
@@ -391,7 +423,8 @@ class EggnoggGym():
             #b,7,x
 
             #act
-            self.act(actions_tensor1, actions_tensor2)
+            with torch.autograd.enable_grad():
+                self.act(actions_tensor1, actions_tensor2)
 
             #get state
             state, reward, is_terminal = self.get_single_state()

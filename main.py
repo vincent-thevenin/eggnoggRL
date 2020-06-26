@@ -129,22 +129,48 @@ try:
         with torch.enable_grad():
             while not is_terminal:
                 steps += 1
+                #calculate actions prob
                 actions1 = P1(stateP1, gym.map)
                 actions2 = P2(stateP2, gym.map)
+
+                #act on environement
+                map_old = gym.map.detach_().requires_grad_()
                 state_new, reward, is_terminal = gym.step(actions1, actions2)
                 state_new = state_new.to(gpu)
                 if steps%max_steps == 0:
                     is_terminal = True
 
-                v1_old = V1(stateV1, gym.map)#.detach())
-                v2_old = V2(stateV2, gym.map)#.detach())
+                v1_old = V1(stateV1, map_old, [action[0] for action in gym.prev_action])#.detach())
+                v2_old = V2(stateV2, map_old, [action[1] for action in gym.prev_action])#.detach())
                 with torch.autograd.no_grad():
                     #calculate delta_t: R_t+1 + gamma*V(S#I = max(1e-5, gamma*I)b,ds_t+1) - V(S_t)
                     if not is_terminal:
-                        v1_new = V1(state_new, gym.map)
-                        delta1 = reward[0] + gamma*v1_new - v1_old.detach()
-                        v2_new = V2(state_new, gym.map)
-                        delta2 = reward[1] + gamma*v2_new - v2_old.detach()
+                        actions1_new = P1(state_new, gym.map)
+                        actions2_new = P2(state_new, gym.map)
+                        actions_new = [
+                            [
+                                gym.g(gym.U.sample(), torch.exp(actions1_new[0]).squeeze()),
+                                gym.g(gym.U.sample(), torch.exp(actions2_new[0]).squeeze())
+                            ],
+                            [
+                                gym.g(gym.U.sample(), torch.exp(actions1_new[1]).squeeze()),
+                                gym.g(gym.U.sample(), torch.exp(actions2_new[1]).squeeze())
+                            ],
+                            [
+                                gym.g(gym.U.sample(), [1-torch.exp(actions1_new[2]).squeeze(), torch.exp(actions1_new[2].squeeze())]),
+                                gym.g(gym.U.sample(), [1-torch.exp(actions2_new[2]).squeeze(), torch.exp(actions2_new[2].squeeze())])
+                            ],
+                            [
+                                gym.g(gym.U.sample(), torch.exp(actions1_new[3]).squeeze()),
+                                gym.g(gym.U.sample(), torch.exp(actions2_new[3]).squeeze())
+                            ]
+                        ]
+
+                        v1_new = V1(state_new, gym.map, [action[0] for action in actions_new])
+                        delta1 = reward[0] + gamma*v1_new - v1_old#.detach()
+                        
+                        v2_new = V2(state_new, gym.map, [action[1] for action in actions_new])
+                        delta2 = reward[1] + gamma*v2_new - v2_old#.detach()
                     else:
                         delta1 = reward[0] - v1_old
                         delta2 = reward[1] - v2_old
@@ -153,7 +179,7 @@ try:
                 v1_old.backward()
                 for i,p in enumerate(V1.parameters()):
                     z_value1[i] = gamma*lambda_value*z_value1[i] + p.grad
-                    p.grad = -delta1*z_value1[i] #gradient ascent
+                    p.grad = -delta1*z_value1[i] #gradient ascent"""
 
                 v2_old.backward()
                 for i,p in enumerate(V2.parameters()):
@@ -162,7 +188,7 @@ try:
 
                 optimizerV.step()
 
-                perf_p1 = Perf_p(I, actions1, gym.prev_action, 0)
+                """perf_p1 = Perf_p(I, actions1, gym.prev_action, 0)
                 perf_p1.backward()
                 for i,p in enumerate(P1.parameters()):
                     z_policy1[i] = gamma*lambda_policy*z_policy1[i] + p.grad
@@ -172,7 +198,11 @@ try:
                 perf_p2.backward()
                 for i,p in enumerate(P2.parameters()):
                     z_policy2[i] = gamma*lambda_policy*z_policy2[i] + p.grad
-                    p.grad = -delta2*z_policy2[i]
+                    p.grad = -delta2*z_policy2[i]"""
+                perf_p1 = Perf_p(V1, stateP1, map_old, gym.U, gym.g, actions1, N=1)
+                perf_p2 = Perf_p(V2, stateP2, map_old, gym.U, gym.g, actions2, N=1)
+                perf_p1.backward()
+                perf_p2.backward()
                 
                 optimizerP.step()
 

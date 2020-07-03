@@ -65,11 +65,11 @@ class Policy(nn.Module):
         #b,512
 
         out1 = self.lin1(out)
-        out = self.relu(out1)
+        out = self.relu(out1) + out
         out2 = self.lin2(out)
-        out = self.relu(out2)
+        out = self.relu(out2) + out
         out3 = self.lin3(out)
-        out = self.relu(out3)
+        out = self.relu(out3) + out
         out4 = self.lin4(out)
         out = self.relu(out4)
         out5 = self.lin5(out)
@@ -160,11 +160,11 @@ class Value(nn.Module):
         out2 = self.lin2(out)
         out = self.relu(out2)
         out3 = self.lin3(out)
-        out = self.relu(out3)
+        out = self.relu(out3) + out
         out4 = self.lin4(out)
-        out = self.relu(out4)
+        out = self.relu(out4) + out
         out5 = self.lin5(out)
-        out = self.relu(out5)
+        out = self.relu(out5) + out
         out = self.lin6(out)
         #b, 1
 

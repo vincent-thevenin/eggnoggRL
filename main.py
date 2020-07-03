@@ -48,7 +48,7 @@ def display_text(text):
 
 #params
 min_I = 1e-3
-max_steps = 5000
+max_steps = 500
 lambda_policy = 0.5
 lambda_value = 0.0
 gamma = 0.1 #exp(log(min_I)/max_steps)

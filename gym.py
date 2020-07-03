@@ -70,15 +70,15 @@ class EggnoggGym():
         cum_pk = 0
         n = 0
         while epsilon - cum_pk > 0:
-            cum_pk = cum_pk + pks[n]
+            cum_pk = cum_pk + pks[n].detach()
             n += 1
         n -= 1
-        cum_pk = cum_pk - pks[n]
+        cum_pk = cum_pk - pks[n].detach()
         
 
         cum_pk2 = 0
         for pk in pks[n:]:
-            cum_pk2 = cum_pk2 + pk
+            cum_pk2 = cum_pk2 + pk.detach()
         
         x = (2*epsilon - 1 - cum_pk + cum_pk2)/(2*pks[n]) + n
 
@@ -362,8 +362,8 @@ class EggnoggGym():
 
         #calculate reward for pushing when leading
         if True:#leader == 0: #player 1 lead
-            #bonus = p1_x > self.prev_p1_x
-            bonus = int(self.prev_action[0][0]) == 0
+            bonus = p1_x > self.prev_p1_x
+            #bonus = int(self.prev_action[0][0]) == 0
             r1 += (int(bonus)-0.5)*2
             #r2 -= bonus
         elif leader == 1: #player 2 lead

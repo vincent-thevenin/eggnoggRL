@@ -2,9 +2,9 @@ import torch.nn as nn
 import torch
 
 class PerfPolicy(nn.Module):
-    def __init__(self):
+    def __init__(self, device):
         super(PerfPolicy, self).__init__()
-        self.eps = 1e-6
+        self.device = device
     def forward(self, V, states, gym_map, U, g, actions_prob, N=1):
         """returns gradient in the sense of pathwise MC gradient
         Args:
@@ -16,16 +16,26 @@ class PerfPolicy(nn.Module):
             actions_prob: parameters of distribution from policy,
             N: number of sampling from Uniform distribution for estimation"""
         mu = 0
-        for _ in range(N):
-            eps = U.sample()
-            actions = [
-                g(U.sample(), torch.exp(actions_prob[0]).squeeze()),
-                g(U.sample(), torch.exp(actions_prob[1]).squeeze()),
-                g(U.sample(), [1-torch.exp(actions_prob[2]).squeeze(), torch.exp(actions_prob[2].squeeze())]),
-                g(U.sample(), torch.exp(actions_prob[3]).squeeze())
-            ]
 
-            mu += V(states, gym_map, actions)
+    
+        for _ in range(N):
+            encoding = torch.zeros(11).to(self.device)
+            #x move
+            g_eps = g(U.sample().to(self.device).requires_grad_(), torch.exp(actions_prob[0]).squeeze())
+            encoding[int(g_eps)] = g_eps +1- int(g_eps)
+            #y move
+            g_eps = g(U.sample().to(self.device).requires_grad_(), torch.exp(actions_prob[1]).squeeze())
+            encoding[int(g_eps)+3] = g_eps +1- int(g_eps)
+            #jump
+            g_eps = g(U.sample().to(self.device).requires_grad_(), [1-torch.exp(actions_prob[2]).squeeze(), torch.exp(actions_prob[2].squeeze())])
+            encoding[int(g_eps)+3+3] = g_eps +1- int(g_eps)
+            #stab
+            g_eps = g(U.sample().to(self.device).requires_grad_(), torch.exp(actions_prob[3]).squeeze())
+            encoding[int(g_eps)+3+3+2] = g_eps +1- int(g_eps)
+            print(encoding[0:3])
+            encoding = encoding.unsqueeze(0)
+
+            mu += V(states, gym_map, encoding)
         return -mu/N #gradient ascent
         
 

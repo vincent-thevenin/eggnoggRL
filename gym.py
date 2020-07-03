@@ -8,8 +8,8 @@ import torchvision.transforms as transforms
 from xdo import Xdo
 from time import sleep
 import torch
-from torch.distributions.categorical import Categorical
 from torch.distributions.uniform import Uniform
+from torch.distributions.categorical import Categorical
 import pyautogui
 import pyeggnogg as EggNogg
 
@@ -52,6 +52,8 @@ class EggnoggGym():
         self.is_throwing2 = False
 
         #grab first seq_frame frames
+        self.prev_p1_x = 0
+        self.prev_p2_x = 0
         self.states = self.get_single_state()[0]
         for _ in range(self.seq_len-1):
             self.states = torch.cat((self.states, # pylint: disable=no-member
@@ -66,12 +68,21 @@ class EggnoggGym():
         epsilon: sample from uniform distriution
         pks: probabilities for the categoical sampling (shape: (N))"""
         cum_pk = 0
-        for i, pk in enumerate(pks):
-            cum_pk += pk
-            if epsilon-cum_pk <= 0:
-                break
-        return (epsilon-(cum_pk-pk))/pk + i #i+1 - 1
+        n = 0
+        while epsilon - cum_pk > 0:
+            cum_pk = cum_pk + pks[n]
+            n += 1
+        n -= 1
+        cum_pk = cum_pk - pks[n]
+        
 
+        cum_pk2 = 0
+        for pk in pks[n:]:
+            cum_pk2 = cum_pk2 + pk
+        
+        x = (2*epsilon - 1 - cum_pk + cum_pk2)/(2*pks[n]) + n
+
+        return x
 
     def act(self, action_tensors1, action_tensors2):
         """
@@ -83,23 +94,23 @@ class EggnoggGym():
         """
         
         x_action = [
-            self.g(self.U.sample(), torch.exp(action_tensors1[0]).squeeze()),
-            self.g(self.U.sample(), torch.exp(action_tensors2[0]).squeeze())
+            self.g(self.U.sample().to(self.device), torch.exp(action_tensors1[0]).squeeze()),
+            self.g(self.U.sample().to(self.device), torch.exp(action_tensors2[0]).squeeze())
         ]
 
         y_action = [
-            self.g(self.U.sample(), torch.exp(action_tensors1[1]).squeeze()),
-            self.g(self.U.sample(), torch.exp(action_tensors2[1]).squeeze())
+            self.g(self.U.sample().to(self.device), torch.exp(action_tensors1[1]).squeeze()),
+            self.g(self.U.sample().to(self.device), torch.exp(action_tensors2[1]).squeeze())
         ]
 
         jump_action = [
-            self.g(self.U.sample(), [1-torch.exp(action_tensors1[2]).squeeze(), torch.exp(action_tensors1[2].squeeze())]),
-            self.g(self.U.sample(), [1-torch.exp(action_tensors2[2]).squeeze(), torch.exp(action_tensors2[2].squeeze())])
+            self.g(self.U.sample().to(self.device), [1-torch.exp(action_tensors1[2]).squeeze(), torch.exp(action_tensors1[2].squeeze())]),
+            self.g(self.U.sample().to(self.device), [1-torch.exp(action_tensors2[2]).squeeze(), torch.exp(action_tensors2[2].squeeze())])
         ]
 
         stab_action = [
-            self.g(self.U.sample(), torch.exp(action_tensors1[3]).squeeze()),
-            self.g(self.U.sample(), torch.exp(action_tensors2[3]).squeeze())
+            self.g(self.U.sample().to(self.device), torch.exp(action_tensors1[3]).squeeze()),
+            self.g(self.U.sample().to(self.device), torch.exp(action_tensors2[3]).squeeze())
         ]
         
         string_press = []
@@ -115,12 +126,12 @@ class EggnoggGym():
             string_lift.extend(['q','d'])
 
         x_action_1 = int(x_action[1])
-        if x_action_1 == 0:
+        """if x_action_1 == 0:
             string_press.append('k')
         elif x_action_1 == 1:
             string_press.append('m')
         if x_action_1 == 2 or x_action_1 != int(self.prev_action[0][1]):
-            string_lift.extend(['k','m'])
+            string_lift.extend(['k','m'])"""
 
         #y action
         y_action_0 = int(y_action[0])
@@ -132,19 +143,19 @@ class EggnoggGym():
             string_lift.extend(['z','s'])
 
         y_action_1 = int(y_action[1])
-        if y_action_1 == 0:
+        """if y_action_1 == 0:
             string_press.append('o')
         elif y_action_1 == 1:
             string_press.append('l')
         if y_action_1 == 2 or y_action_1 != int(self.prev_action[1][1]):
-            string_lift.extend(['o','l'])
+            string_lift.extend(['o','l'])"""
         
         #jump action
         if int(jump_action[0]):
             string_press.append('c')
 
-        if int(jump_action[1]):
-            string_press.append('n')
+        """if int(jump_action[1]):
+            string_press.append('n')"""
         
         #stab action
         stab_action_0 = int(stab_action[0])
@@ -158,14 +169,14 @@ class EggnoggGym():
             string_lift.append('v')
 
         stab_action_1 = int(stab_action[1])
-        self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action_1==1 or self.is_throwing2) #has sword and wants to throw or has sword and is already throwing
+        """self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action_1==1 or self.is_throwing2) #has sword and wants to throw or has sword and is already throwing
         if self.is_throwing2:
             string_press.append(',')
         elif stab_action_1==0 or stab_action_1==1:
             string_lift.append(',')
             string_press.append(',')
         if stab_action_1==2:
-            string_lift.append(',')
+            string_lift.append(',')"""
         
         #update previous actions
         self.prev_action = [x_action, y_action, jump_action, stab_action]
@@ -173,9 +184,10 @@ class EggnoggGym():
         #send inputs to eggnogg
         for lift in string_lift:
             pyautogui.keyUp(lift, _pause=False)
+        sleep(0.001)
         for press in string_press:
             pyautogui.keyDown(press, _pause=False)
-
+        
     def getMap(self):
         """{"v":"down_pikes",
         "w":"water",
@@ -342,16 +354,17 @@ class EggnoggGym():
         r1 = r2 = 0
         #calculate reward for changing room
         if room_number > self.current_room:
-            r1 += 0.1
-            r2 += -0.1
+            r1 += 1
+            r2 += -1
         elif room_number < self.current_room:
-            r1 += -0.1
-            r2 += 0.1
+            r1 += -1
+            r2 += 1
 
         #calculate reward for pushing when leading
-        #if leader == 0: #player 1 lead
-            #bonus = p1_x - self.prev_p1_x
-            #r1 += bonus*100
+        if True:#leader == 0: #player 1 lead
+            #bonus = p1_x > self.prev_p1_x
+            bonus = int(self.prev_action[0][0]) == 0
+            r1 += (int(bonus)-0.5)*2
             #r2 -= bonus
         elif leader == 1: #player 2 lead
             bonus = self.prev_p2_x - p2_x
@@ -423,8 +436,7 @@ class EggnoggGym():
             #b,7,x
 
             #act
-            with torch.autograd.enable_grad():
-                self.act(actions_tensor1, actions_tensor2)
+            self.act(actions_tensor1, actions_tensor2)
 
             #get state
             state, reward, is_terminal = self.get_single_state()

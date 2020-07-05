@@ -70,17 +70,24 @@ class EggnoggGym():
         cum_pk = 0
         n = 0
         while epsilon - cum_pk > 0:
-            cum_pk = cum_pk + pks[n].detach()
+            cum_pk = cum_pk + pks[n]
             n += 1
         n -= 1
-        cum_pk = cum_pk - pks[n].detach()
+        cum_pk = cum_pk - pks[n]
         
 
-        cum_pk2 = 0
-        for pk in pks[n:]:
+        cum_pk2 = pks[n]
+        for pk in pks[n+1:]:
             cum_pk2 = cum_pk2 + pk.detach()
         
-        x = (2*epsilon - 1 - cum_pk + cum_pk2)/(2*pks[n]) + n
+        """n1 = cum_pk2.detach() - cum_pk2.detach()
+        for i in range(n):
+            n1 += pks[i]/pks[i].detach()
+        n2 = pks[n].detach()/pks[n]
+        for pk in pks[n+1:]:
+            n2 += pk/pk.detach()"""
+
+        x = (2*epsilon - 1 - cum_pk + cum_pk2)/(2*pks[n].detach()) + n#(n1.detach())#-n2.detach()+ (n1+n2).detach())/2
 
         return x
 
@@ -162,20 +169,20 @@ class EggnoggGym():
         self.is_throwing1 = self.states[0,-1,6]==1 and (stab_action_0==1 or self.is_throwing1) #has sword and wants to throw or has sword and is already throwing
         if self.is_throwing1:
             string_press.append('v')
-        elif stab_action_0==0 or stab_action_0==1:
+        elif stab_action_0==0:
             string_lift.append('v')
             string_press.append('v')
-        if stab_action_0==2:
+        elif stab_action_0==2 or stab_action_0 == 1:
             string_lift.append('v')
 
         stab_action_1 = int(stab_action[1])
         """self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action_1==1 or self.is_throwing2) #has sword and wants to throw or has sword and is already throwing
         if self.is_throwing2:
             string_press.append(',')
-        elif stab_action_1==0 or stab_action_1==1:
+        elif stab_action_1==0:
             string_lift.append(',')
             string_press.append(',')
-        if stab_action_1==2:
+        elif stab_action_1==2 or stab_action_1==1:
             string_lift.append(',')"""
         
         #update previous actions
@@ -184,9 +191,11 @@ class EggnoggGym():
         #send inputs to eggnogg
         for lift in string_lift:
             pyautogui.keyUp(lift, _pause=False)
-        sleep(0.001)
+        sleep(0.01)
         for press in string_press:
             pyautogui.keyDown(press, _pause=False)
+        
+        
         
     def getMap(self):
         """{"v":"down_pikes",
@@ -354,22 +363,23 @@ class EggnoggGym():
         r1 = r2 = 0
         #calculate reward for changing room
         if room_number > self.current_room:
-            r1 += 1
+            r1 += 10
             r2 += -1
         elif room_number < self.current_room:
             r1 += -1
             r2 += 1
 
         #calculate reward for pushing when leading
-        if True:#leader == 0: #player 1 lead
-            bonus = p1_x > self.prev_p1_x
-            #bonus = int(self.prev_action[0][0]) == 0
-            r1 += (int(bonus)-0.5)*2
+        if leader == 0: #player 1 lead
+            #bonus = p1_x > self.prev_p1_x
+            bonus = int(self.prev_action[0][0]) == 0
+            r1 += (int(bonus)-0.5)/5
             #r2 -= bonus
-        elif leader == 1: #player 2 lead
+        elif leader == 1 or leader == -1: #player 2 lead
             bonus = self.prev_p2_x - p2_x
-            #r1 -= bonus
+            bonus = int(self.prev_action[0][0]) == 0
             r2 += bonus*100
+            r1 -= (p1_x - p2_x)**2+1
 
         # #calculate reward for surviving, dying and killing
         # if leader == 0: #player 1 lead

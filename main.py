@@ -48,12 +48,12 @@ def display_text(text):
 
 #params
 min_I = 1e-3
-max_steps = 500
+max_steps = 1000
 lambda_policy = 0.5
 lambda_value = 0.0
-gamma = 0.1 #exp(log(min_I)/max_steps)
+gamma = 0.9 #exp(log(min_I)/max_steps)
 print(gamma)
-N = 1
+N = 7
 path_to_chkpt = 'weightsPathwise.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
 gpu = torch.device('cuda:0') #pylint: disable=no-member
@@ -92,7 +92,7 @@ V2.to(gpu)
 
 #optimizer
 optimizerP = optim.SGD(params= list(P1.parameters())+list(P2.parameters()),
-                        lr=1e-1)
+                        lr=1e-2)
 optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
                         lr=1e-1)
 
@@ -149,7 +149,8 @@ try:
                     encode1[int(gym.prev_action[2][0])+3+3] = gym.prev_action[2][0]#[1-torch.exp(actions1[2][0]), torch.exp(actions1[2][0])][int(gym.prev_action[2][0])]
                     encode1[int(gym.prev_action[3][0])+3+3+2] = gym.prev_action[3][0]#torch.exp(actions1[3][0,int(gym.prev_action[3][0])])
                     for i in range(encode1.shape[0]):
-                        encode1[i] += int(encode1[i] != 0) - int(encode1[i])
+                        encode1[i] = int(encode1[i] != 0)*(100+encode1[i])
+
                     encode1 = encode1.unsqueeze(0).requires_grad_()
                     
                     encode2 = torch.zeros(11).to(gpu)
@@ -186,13 +187,13 @@ try:
                         encode1 = encode1.unsqueeze(0)"""
                         encode1_new = torch.zeros(11).to(gpu)
                         y = gym.g(gym.U.sample().to(gpu), torch.exp(actions1_new[0]).squeeze())
-                        encode1_new[int(y)] = y +1- int(y)
+                        encode1_new[int(y)] = (y + 100)/100
                         y = gym.g(gym.U.sample().to(gpu), torch.exp(actions1_new[1]).squeeze())
-                        encode1_new[int(y)+3] = y +1- int(y)
+                        encode1_new[int(y)+3] = (y + 100)/100
                         y = gym.g(gym.U.sample().to(gpu), [1-torch.exp(actions1_new[2]).squeeze(), torch.exp(actions1_new[2].squeeze())])
-                        encode1_new[int(y)+3+3] = y +1- int(y)
+                        encode1_new[int(y)+3+3] = (y + 100)/100
                         y = gym.g(gym.U.sample().to(gpu), torch.exp(actions1_new[3]).squeeze())
-                        encode1_new[int(y)+3+3+2] = y +1- int(y)
+                        encode1_new[int(y)+3+3+2] = (y + 100)/100
                         encode1_new = encode1_new.unsqueeze(0).requires_grad_()
 
                         encode2 = torch.zeros(11).to(gpu)

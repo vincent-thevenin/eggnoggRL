@@ -22,21 +22,22 @@ class PerfPolicy(nn.Module):
             encoding = torch.zeros(11).to(self.device)
             #x move
             g_eps = g(U.sample().to(self.device).requires_grad_(), torch.exp(actions_prob[0]).squeeze())
-            encoding[int(g_eps)] = g_eps +1- int(g_eps)
+            encoding[int(g_eps)] = (g_eps +100)/100
             #y move
             g_eps = g(U.sample().to(self.device).requires_grad_(), torch.exp(actions_prob[1]).squeeze())
-            encoding[int(g_eps)+3] = g_eps +1- int(g_eps)
+            encoding[int(g_eps)+3] = (g_eps +100)/100
             #jump
             g_eps = g(U.sample().to(self.device).requires_grad_(), [1-torch.exp(actions_prob[2]).squeeze(), torch.exp(actions_prob[2].squeeze())])
-            encoding[int(g_eps)+3+3] = g_eps +1- int(g_eps)
+            encoding[int(g_eps)+3+3] = (g_eps +100)/100
             #stab
             g_eps = g(U.sample().to(self.device).requires_grad_(), torch.exp(actions_prob[3]).squeeze())
-            encoding[int(g_eps)+3+3+2] = g_eps +1- int(g_eps)
-            print(encoding[0:3])
+            encoding[int(g_eps)+3+3+2] = (g_eps +100)/100
+            #print(encoding[0:3])
             encoding = encoding.unsqueeze(0)
 
             mu += V(states, gym_map, encoding)
-        return -mu/N #gradient ascent
+        
+        return mu/N #gradient ascent
         
 
 class PerfValue(nn.Module):

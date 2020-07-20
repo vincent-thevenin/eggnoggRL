@@ -37,7 +37,7 @@ class PerfPolicy(nn.Module):
 
             mu += V(states, gym_map, encoding)
         
-        return mu/N #gradient ascent
+        return -mu/N #gradient ascent
         
 
 class PerfValue(nn.Module):

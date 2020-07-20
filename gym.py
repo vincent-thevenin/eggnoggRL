@@ -70,24 +70,24 @@ class EggnoggGym():
         cum_pk = 0
         n = 0
         while epsilon - cum_pk > 0:
-            cum_pk = cum_pk + pks[n]
+            cum_pk = cum_pk + pks[n].detach()
             n += 1
         n -= 1
-        cum_pk = cum_pk - pks[n]
+        cum_pk = cum_pk - pks[n].detach()
         
 
-        cum_pk2 = pks[n]
+        cum_pk2 = pks[n].detach()
         for pk in pks[n+1:]:
             cum_pk2 = cum_pk2 + pk.detach()
         
-        """n1 = cum_pk2.detach() - cum_pk2.detach()
+        n1 = cum_pk2.detach() - cum_pk2.detach()
         for i in range(n):
-            n1 += pks[i]/pks[i].detach()
+            n1 += pks[i].detach()/pks[i]
         n2 = pks[n].detach()/pks[n]
         for pk in pks[n+1:]:
-            n2 += pk/pk.detach()"""
+            n2 += pk/pk.detach()
 
-        x = (2*epsilon - 1 - cum_pk + cum_pk2)/(2*pks[n].detach()) + n#(n1.detach())#-n2.detach()+ (n1+n2).detach())/2
+        x = (2*epsilon - 1 - cum_pk + cum_pk2)/(2*pks[n].detach()) + (n1-n2+ (n1+n2).detach())/2
 
         return x
 
@@ -133,12 +133,12 @@ class EggnoggGym():
             string_lift.extend(['q','d'])
 
         x_action_1 = int(x_action[1])
-        """if x_action_1 == 0:
+        if x_action_1 == 0:
             string_press.append('k')
         elif x_action_1 == 1:
             string_press.append('m')
         if x_action_1 == 2 or x_action_1 != int(self.prev_action[0][1]):
-            string_lift.extend(['k','m'])"""
+            string_lift.extend(['k','m'])
 
         #y action
         y_action_0 = int(y_action[0])
@@ -150,19 +150,19 @@ class EggnoggGym():
             string_lift.extend(['z','s'])
 
         y_action_1 = int(y_action[1])
-        """if y_action_1 == 0:
+        if y_action_1 == 0:
             string_press.append('o')
         elif y_action_1 == 1:
             string_press.append('l')
         if y_action_1 == 2 or y_action_1 != int(self.prev_action[1][1]):
-            string_lift.extend(['o','l'])"""
+            string_lift.extend(['o','l'])
         
         #jump action
         if int(jump_action[0]):
             string_press.append('c')
 
-        """if int(jump_action[1]):
-            string_press.append('n')"""
+        if int(jump_action[1]):
+            string_press.append('n')
         
         #stab action
         stab_action_0 = int(stab_action[0])
@@ -176,14 +176,14 @@ class EggnoggGym():
             string_lift.append('v')
 
         stab_action_1 = int(stab_action[1])
-        """self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action_1==1 or self.is_throwing2) #has sword and wants to throw or has sword and is already throwing
+        self.is_throwing2 = self.states[0,-1,7]==1 and (stab_action_1==1 or self.is_throwing2) #has sword and wants to throw or has sword and is already throwing
         if self.is_throwing2:
             string_press.append(',')
         elif stab_action_1==0:
             string_lift.append(',')
             string_press.append(',')
         elif stab_action_1==2 or stab_action_1==1:
-            string_lift.append(',')"""
+            string_lift.append(',')
         
         #update previous actions
         self.prev_action = [x_action, y_action, jump_action, stab_action]
@@ -363,7 +363,7 @@ class EggnoggGym():
         r1 = r2 = 0
         #calculate reward for changing room
         if room_number > self.current_room:
-            r1 += 10
+            r1 += 1
             r2 += -1
         elif room_number < self.current_room:
             r1 += -1
@@ -371,16 +371,18 @@ class EggnoggGym():
 
         #calculate reward for pushing when leading
         if leader == 0: #player 1 lead
-            #bonus = p1_x > self.prev_p1_x
-            bonus = int(self.prev_action[0][0]) == 0
-            r1 += (int(bonus)-0.5)/5
+            bonus = p1_x+1
+            #bonus = int(self.prev_action[0][0]) == 2
+            r1 += bonus
+            r2 += min(p1_x - p2_x, p2_x - p1_x)
             #r2 -= bonus
-        elif leader == 1 or leader == -1: #player 2 lead
-            bonus = self.prev_p2_x - p2_x
-            bonus = int(self.prev_action[0][0]) == 0
-            r2 += bonus*100
-            r1 -= (p1_x - p2_x)**2+1
-
+        elif leader == 1: #player 2 lead
+            bonus = 1-p2_x
+            r1 += min(p1_x - p2_x, p2_x - p1_x)
+            r2 += bonus
+        else:
+            r1 += min(p1_x - p2_x, p2_x - p1_x)
+            r2 += min(p1_x - p2_x, p2_x - p1_x)
         # #calculate reward for surviving, dying and killing
         # if leader == 0: #player 1 lead
         #     bonus = (p1_life)/10

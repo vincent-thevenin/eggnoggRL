@@ -11,7 +11,7 @@ from math import sqrt, exp, log
 import sys
 import pygame
 from torch.distributions.categorical import Categorical
-
+from torch.nn.utils import clip_grad_value_
 
 pygame.init()
 
@@ -48,12 +48,12 @@ def display_text(text):
 
 #params
 min_I = 1e-3
-max_steps = 1000
+max_steps = 500
 lambda_policy = 0.5
 lambda_value = 0.0
-gamma = 0.9 #exp(log(min_I)/max_steps)
+gamma = 0.1 #exp(log(min_I)/max_steps)
 print(gamma)
-N = 7
+N = 1
 path_to_chkpt = 'weightsPathwise.tar'
 cpu = torch.device('cpu') #pylint: disable=no-member
 gpu = torch.device('cuda:0') #pylint: disable=no-member
@@ -94,7 +94,7 @@ V2.to(gpu)
 optimizerP = optim.SGD(params= list(P1.parameters())+list(P2.parameters()),
                         lr=1e-2)
 optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
-                        lr=1e-1)
+                        lr=1e-3)
 
 
 #############################################################################
@@ -102,7 +102,7 @@ optimizerV = optim.SGD(params=list(V1.parameters())+list(V2.parameters()),
 ##############################################################################
 
 #init gym
-gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=60, seq_len=32)
+gym = EggnoggGym(need_pretrained, gpu, lib_path, executable_path, speed=120, seq_len=32)
 try:
     while True:
         #INITS
@@ -149,17 +149,16 @@ try:
                     encode1[int(gym.prev_action[2][0])+3+3] = gym.prev_action[2][0]#[1-torch.exp(actions1[2][0]), torch.exp(actions1[2][0])][int(gym.prev_action[2][0])]
                     encode1[int(gym.prev_action[3][0])+3+3+2] = gym.prev_action[3][0]#torch.exp(actions1[3][0,int(gym.prev_action[3][0])])
                     for i in range(encode1.shape[0]):
-                        encode1[i] = int(encode1[i] != 0)*(100+encode1[i])
-
+                        encode1[i] = int(encode1[i] != 0)*(100+encode1[i])/100
                     encode1 = encode1.unsqueeze(0).requires_grad_()
                     
                     encode2 = torch.zeros(11).to(gpu)
-                    """encode2[int(gym.prev_action[0][1])] = torch.exp(actions2[0][0,int(gym.prev_action[0][1])])
-                    encode2[int(gym.prev_action[1][1])+3] = torch.exp(actions2[1][0,int(gym.prev_action[1][1])])
-                    encode2[int(gym.prev_action[2][1])+3+3] = [1-torch.exp(actions2[2][0]), torch.exp(actions2[2][0])][int(gym.prev_action[2][1])]
-                    encode2[int(gym.prev_action[3][1])+3+3+2] = torch.exp(actions1[3][0,int(gym.prev_action[3][1])])
+                    encode2[int(gym.prev_action[0][1])] = gym.prev_action[0][1]#torch.exp(actions1[0][0,int(gym.prev_action[0][0])])
+                    encode2[int(gym.prev_action[1][1])+3] = gym.prev_action[1][1]#torch.exp(actions1[1][0,int(gym.prev_action[1][0])])
+                    encode2[int(gym.prev_action[2][1])+3+3] = gym.prev_action[2][1]#[1-torch.exp(actions1[2][0]), torch.exp(actions1[2][0])][int(gym.prev_action[2][0])]
+                    encode2[int(gym.prev_action[3][1])+3+3+2] = gym.prev_action[3][1]#torch.exp(actions1[3][0,int(gym.prev_action[3][0])])
                     for i in range(encode2.shape[0]):
-                        encode2[i] -= int(encode2[i])"""     
+                        encode2[i] = int(encode2[i] != 0)*(100+encode2[i])/100
                     encode2 = encode2.unsqueeze(0).requires_grad_()
 
 
@@ -172,19 +171,6 @@ try:
                         actions1_new = P1(state_new, gym.map)
                         actions2_new = P2(state_new, gym.map)
                         
-                        """encode1 = torch.zeros(11).to(gpu)
-                        idx = int(Categorical(torch.exp(actions1_new[0])).sample())
-                        encode1[idx] = torch.exp(actions1_new[0][0,idx])
-                        idx = int(Categorical(torch.exp(actions1_new[1])).sample())
-                        encode1[idx+3] = torch.exp(actions1_new[1][0,idx])
-                        idx = int(Categorical(torch.Tensor([1-torch.exp(actions1_new[2].squeeze()), torch.exp(actions1_new[2].squeeze())])).sample())
-                        encode1[idx+3+3] = [1-torch.exp(actions1_new[2]),torch.exp(actions1_new[2])][idx]
-                        idx = int(Categorical(torch.exp(actions1_new[3])).sample())
-                        encode1[idx+3+3+2] = torch.exp(actions1_new[3][0,idx])
-                        #for i in range(encode1.shape[0]):
-                            #if encode1[i] != 0:
-                                #encode1[i] /= encode1[i]
-                        encode1 = encode1.unsqueeze(0)"""
                         encode1_new = torch.zeros(11).to(gpu)
                         y = gym.g(gym.U.sample().to(gpu), torch.exp(actions1_new[0]).squeeze())
                         encode1_new[int(y)] = (y + 100)/100
@@ -196,23 +182,21 @@ try:
                         encode1_new[int(y)+3+3+2] = (y + 100)/100
                         encode1_new = encode1_new.unsqueeze(0).requires_grad_()
 
-                        encode2 = torch.zeros(11).to(gpu)
-                        idx = int(Categorical(torch.exp(actions2_new[0])).sample())
-                        encode2[idx] = torch.exp(actions2_new[0][0,idx])
-                        idx = int(Categorical(torch.exp(actions2_new[1])).sample())
-                        encode2[idx+3] = torch.exp(actions2_new[1][0,idx])
-                        idx = int(Categorical(torch.Tensor([1-torch.exp(actions2_new[2].squeeze()), torch.exp(actions2_new[2].squeeze())])).sample())
-                        encode2[idx+3+3] = [1-torch.exp(actions2_new[2]),torch.exp(actions2_new[2])][idx]
-                        idx = int(Categorical(torch.exp(actions2_new[3])).sample())
-                        encode2[idx+3+3+2] = torch.exp(actions2_new[3][0,idx])
-                        for i in range(encode2.shape[0]):
-                            encode2[i] -= int(encode2[i])
-                        encode2 = encode2.unsqueeze(0)
+                        encode2_new = torch.zeros(11).to(gpu)
+                        y = gym.g(gym.U.sample().to(gpu), torch.exp(actions2_new[0]).squeeze())
+                        encode2_new[int(y)] = (y + 100)/100
+                        y = gym.g(gym.U.sample().to(gpu), torch.exp(actions2_new[1]).squeeze())
+                        encode2_new[int(y)+3] = (y + 100)/100
+                        y = gym.g(gym.U.sample().to(gpu), [1-torch.exp(actions2_new[2]).squeeze(), torch.exp(actions2_new[2].squeeze())])
+                        encode2_new[int(y)+3+3] = (y + 100)/100
+                        y = gym.g(gym.U.sample().to(gpu), torch.exp(actions2_new[3]).squeeze())
+                        encode2_new[int(y)+3+3+2] = (y + 100)/100
+                        encode2_new = encode2_new.unsqueeze(0).requires_grad_()
 
                         v1_new = V1(state_new, gym.map, encode1_new)
                         delta1 = reward[0] + gamma*v1_new - v1_old#.detach()
                         
-                        v2_new = V2(state_new, gym.map, encode2)
+                        v2_new = V2(state_new, gym.map, encode2_new)
                         delta2 = reward[1] + gamma*v2_new - v2_old#.detach()
                     else:
                         delta1 = reward[0] - v1_old
@@ -247,14 +231,14 @@ try:
                     z_policy2[i] = gamma*lambda_policy*z_policy2[i] + p.grad
                     p.grad = -delta2*z_policy2[i]"""
                 #calculate actions prob
-                #TODO uncomment stopped training for p2
                 actions1 = P1(stateP1.detach(), map_old.detach())
-                #actions2 = P2(stateP2, map_old)
+                actions2 = P2(stateP2.detach(), map_old.detach())
                 perf_p1 = Perf_p(V1, stateP1.detach().requires_grad_(), map_old.detach().requires_grad_(), gym.U, gym.g, actions1, N=N)
-                #perf_p2 = Perf_p(V2, stateP2.detach().requires_grad_(), map_old.detach().requires_grad_(), gym.U, gym.g, actions2, N=1)
+                perf_p2 = Perf_p(V2, stateP2.detach().requires_grad_(), map_old.detach().requires_grad_(), gym.U, gym.g, actions2, N=N)
                 perf_p1.backward()
-                #perf_p2.backward()
+                perf_p2.backward()
                 
+                #clip_grad_value_(P1.parameters(), 1e-4)
                 optimizerP.step()
                 optimizerP.zero_grad()
 
